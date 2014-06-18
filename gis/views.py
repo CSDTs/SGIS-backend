@@ -11,6 +11,7 @@ class DatasetViewSet(viewsets.ModelViewSet):
 
 class MapPointViewSet(viewsets.ModelViewSet):
     serializer_class = MapPointSerializer
+    model = MapPoint
 
     def get_queryset(self):
     	queryset = MapPoint.objects.all()
@@ -45,6 +46,8 @@ class MapPointViewSet(viewsets.ModelViewSet):
 	    		queryset = queryset.filter(street__iexact = result)
 	    	elif p == 'state':
 	    		queryset = queryset.filter(state__iexact = result)
+	    	elif p == 'county':
+	    		queryset = queryset.filter(county__iexact = result)
 	    	elif p in ['zipcode','zip','zip_code']:
 	    		queryset = queryset.filter(zipcode__iexact = result)
         return queryset
