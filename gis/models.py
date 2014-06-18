@@ -5,7 +5,6 @@ from django.utils.timezone import utc
 
 import simplejson as json
 import urllib
-import re
 
 class Dataset(models.Model):
     name = models.CharField(max_length=200)
@@ -31,6 +30,8 @@ class Dataset(models.Model):
         #using SODA API?
         json_in = json.loads(urllib.urlopen(self.url + '?$order=' + self.remote_id_field).read())
 
+	#want to change this so the column structure is established before the loop,
+	#but the loop needs to b flexible enough to allow for missing columns in json (just in case)
         rec_read = len(json_in)
         while len(json_in) > 0:
             i = 0
