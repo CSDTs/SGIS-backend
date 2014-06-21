@@ -27,8 +27,8 @@ class MapPointViewSet(viewsets.ModelViewSet):
     			try:
     				r = float(result)
     				#for tolerance
-	    			minr = r - 0.0005
-	    			maxr = r + 0.0005 
+	    			minr = r - 0.0000005
+	    			maxr = r + 0.0000005 
     			except:
     				continue
 	    		if p == 'max_lat' or p == 'lat':
