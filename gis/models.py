@@ -1,5 +1,5 @@
 from django.db import models
-#from django.contrib.gis.db import models
+#from django.contrib.gis.db import models #may need to switch to this later
 from datetime import datetime
 from django.utils.timezone import utc
 
@@ -14,7 +14,13 @@ class Dataset(models.Model):
     #field names
     remote_id_field = models.CharField('column name of key field on the remote server', max_length=50)
     name_field = models.CharField(max_length=50)
-
+    lat_field = models.CharField(max_length=50)
+    lon_field = models.CharField(max_length=50)
+    street_field = models.CharField(max_length=50)
+    city_field = models.CharField(max_length=50)
+    state_field = models.CharField(max_length=50)
+    zipcode_field = models.CharField(max_length=50)
+    county_field = models.CharField(max_length=50)
     field1_name = models.CharField(blank=True,max_length=50)
     field2_name = models.CharField(blank=True,max_length=50)
     field3_name = models.CharField(blank=True,max_length=50)
@@ -22,19 +28,46 @@ class Dataset(models.Model):
     def __unicode__(self):  # Python 3: def __str__(self):
         return self.name
 
+    #recurses through structure of fields and the json
+    # , = level
+    # + = concatenation of 2 or more fields.
+    def reach_field(self, json_item, location):
+        result = ''
+        if len(location) > 1:
+            for field in location[0]:
+                if field in json_item:
+                    result += self.reach_field(json_item[field], location[1:]) + ' '
+        elif len(location) == 1:
+            for field in location[0]:
+                if field in json_item:
+                    result += json_item[field].strip() + ' '
+        return result.strip()
+
     def update_cache(self):
     	since = datetime.utcnow().replace(tzinfo=utc) - self.cached
     	if since.days < self.cache_max_age:
     		return
     	points = MapPoint.objects.filter(dataset_id = self.pk).order_by('remote_id')
-        #using SODA API?
         json_in = json.loads(urllib.urlopen(self.url + '?$order=' + self.remote_id_field).read())
 
-	#want to change this so the column structure is established before the loop,
-	#but the loop needs to b flexible enough to allow for missing columns in json (just in case)
+        #dictionary to hold structure of data in remote dataset
+        fields = {}
+        fields['remote_id'] = [x.split('+') for x in self.remote_id_field.split(',')]
+        fields['name'] = [x.split('+') for x in self.name_field.split(',')]
+        fields['lat'] = [x.split('+') for x in self.lat_field.split(',')]
+        fields['lon'] = [x.split('+') for x in self.lon_field.split(',')] 
+        fields['street'] = [x.split('+') for x in self.street_field.split(',')] 
+        fields['city'] = [x.split('+') for x in self.city_field.split(',')]
+        fields['state'] = [x.split('+') for x in self.state_field.split(',')] 
+        fields['zipcode'] = [x.split('+') for x in self.zipcode_field.split(',')] 
+        fields['county'] = [x.split('+') for x in self.county_field.split(',')]
+        fields['field1'] = [x.split('+') for x in self.field1_name.split(',')]
+        fields['field2'] = [x.split('+') for x in self.field2_name.split(',')]
+        fields['field3'] = [x.split('+') for x in self.field3_name.split(',')]
+
         rec_read = len(json_in)
+        i = 0
         while len(json_in) > 0:
-            i = 0
             for item in json_in:
                 if i < len(points):
                     if points[i].remote_id == str(item[self.remote_id_field]):
@@ -43,44 +76,23 @@ class Dataset(models.Model):
                     elif points[i].remote_id < str(item[self.remote_id_field]):
                         points[i].delete()
                         continue
-                new_point = MapPoint(dataset = self, 
-                    remote_id = str(item[self.remote_id_field]).strip(),
-                    name = item[self.name_field].strip())
-                if 'lat' in item.keys() and 'lon' in item.keys():
-                    new_point.lat = item['lat']
-                    new_point.lon = item['lon']
-                elif 'latitude' in item.keys() and 'longitude' in item.keys():
-                    new_point.lat = item['latitude']
-                    new_point.lon = item['longitude']
-                elif 'location' in item.keys() and 'latitude' in item['location'].keys() and 'longitude' in item['location'].keys():
-                    new_point.lat = item['location']['latitude']
-                    new_point.lon = item['location']['longitude']
-                if 'street' in item.keys():
-                    new_point.street = item['street']
-                elif 'street_name' in item.keys():
-                    new_point.street = item['street_name']
-                if 'street_number' in item.keys():
-                    new_point.street = item['street_number'] + ' ' + new_point.street
-                new_point.city = item['city']
-                new_point.state = item['state'][0:2]
-                new_point.zipcode = item['zip_code'][0:5]
-                new_point.county = item['county']
-                
-                if self.field1_name != '':
-                    new_point.field1 = item[self.field1_name]
-                    if self.field2_name != '':
-                        new_point.field2 = item[self.field2_name],
-                        if self.field3_name != '':
-                            new_point.field3 = item[self.field3_name]
+                new_point = MapPoint(dataset = self)
+                for field in fields:
+                    temp = self.reach_field(item, fields[field])
+                    if field in ['lat','lon']:
+                        try:
+                            temp = float(temp)
+                        except:
+                            continue
+                    setattr(new_point, field, temp)
                 new_point.save() 
             json_in = json.loads(urllib.urlopen(self.url + '?$order=' + self.remote_id_field + '&$offset=' + str(rec_read)).read())
             rec_read += len(json_in)
         self.cached = datetime.utcnow().replace(tzinfo=utc)
 
-
     def save(self, *args, **kwargs):
-        super(Dataset, self).save(*args, **kwargs)
         self.update_cache()
+        super(Dataset, self).save(*args, **kwargs)
         
 
 class MapPoint(models.Model):
