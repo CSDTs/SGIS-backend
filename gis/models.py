@@ -3,7 +3,7 @@ from django.db import models
 from datetime import datetime
 from django.utils.timezone import utc
 
-import simplejson as json
+import json
 import urllib
 
 class Dataset(models.Model):
@@ -48,9 +48,12 @@ class Dataset(models.Model):
         if self.remote_id_field == '':
             plus = ''
         else:
-            plus = '$order=' + self.remote_id_field
-        json_in = json.loads(urllib.urlopen(self.url + '?' + plus).read())
-
+            plus = '?$order=' + self.remote_id_field
+        json_in = json.loads(urllib.urlopen(self.url + plus).read())
+        if plus == '':
+            plus = '?'
+        else:
+            plus += '&'
         #if json_in['error']:
 
         #dictionary to hold structure of data in remote dataset
@@ -91,7 +94,7 @@ class Dataset(models.Model):
                         temp = temp[0:MapPoint._meta.get_field(field).max_length]
                     setattr(new_point, field, temp)
                 new_point.save() 
-            json_in = json.loads(urllib.urlopen(self.url + '?' + plus + '&$offset=' + str(rec_read)).read())
+            json_in = json.loads(urllib.urlopen(self.url + '?' + plus + '$offset=' + str(rec_read)).read())
             rec_read += len(json_in)
         self.cached = datetime.utcnow().replace(tzinfo=utc)
         self.save()
