@@ -94,7 +94,7 @@ class Dataset(models.Model):
                         temp = temp[0:MapPoint._meta.get_field(field).max_length]
                     setattr(new_point, field, temp)
                 new_point.save() 
-            json_in = json.loads(urllib.urlopen(self.url + '?' + plus + '$offset=' + str(rec_read)).read())
+            json_in = json.loads(urllib.urlopen(self.url + plus + '$offset=' + str(rec_read)).read())
             rec_read += len(json_in)
         self.cached = datetime.utcnow().replace(tzinfo=utc)
         self.save()
