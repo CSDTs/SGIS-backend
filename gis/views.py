@@ -1,9 +1,16 @@
 from django.shortcuts import render
-from gis.models import Dataset, MapPoint
+from gis.models import Dataset, MapPoint, Tag
 #from django.contrib.auth.models import User, Group
 from rest_framework import viewsets
-from gis.serializers import DatasetSerializer, MapPointSerializer
+from gis.serializers import DatasetSerializer, MapPointSerializer, TagSerializer
 
+class TagViewSet(viewsets.ModelViewSet):
+    serializer_class = TagSerializer
+    model = Tag
+
+    def get_queryset(self):
+    	queryset = Tag.objects.filter(approved = True).values('tag').annotate(num_tags = Count('id')).order_by()
+    	return Tag.objects.all()
 
 class DatasetViewSet(viewsets.ModelViewSet):
     queryset = Dataset.objects.all()

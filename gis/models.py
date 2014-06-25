@@ -9,18 +9,18 @@ import urllib
 class Dataset(models.Model):
     name = models.CharField(max_length=200)
     url = models.URLField(max_length=300)
-    cached = models.DateTimeField()
+    cached = models.DateTimeField(null=True,blank=True)
     cache_max_age = models.IntegerField('age when cache should be replaced in days',default=1)
     #field names
-    remote_id_field = models.CharField('column name of key field on the remote server', max_length=50)
-    name_field = models.CharField(max_length=50)
-    lat_field = models.CharField(max_length=50)
-    lon_field = models.CharField(max_length=50)
-    street_field = models.CharField(max_length=50)
-    city_field = models.CharField(max_length=50)
-    state_field = models.CharField(max_length=50)
-    zipcode_field = models.CharField(max_length=50)
-    county_field = models.CharField(max_length=50)
+    remote_id_field = models.CharField('column name of key field on the remote server',blank=True, max_length=50, default='id')
+    name_field = models.CharField(max_length=50,default='name')
+    lat_field = models.CharField(max_length=50,default='latitude')
+    lon_field = models.CharField(max_length=50,default='longitude')
+    street_field = models.CharField(max_length=50,default='street')
+    city_field = models.CharField(max_length=50,default='city')
+    state_field = models.CharField(max_length=50,default='state')
+    zipcode_field = models.CharField(max_length=50,default='zip')
+    county_field = models.CharField(max_length=50,default='county')
     field1_name = models.CharField(blank=True,max_length=50)
     field2_name = models.CharField(blank=True,max_length=50)
     field3_name = models.CharField(blank=True,max_length=50)
@@ -44,11 +44,14 @@ class Dataset(models.Model):
         return result.strip()
 
     def update_cache(self):
-    	since = datetime.utcnow().replace(tzinfo=utc) - self.cached
-    	if since.days < self.cache_max_age:
-    		return
     	points = MapPoint.objects.filter(dataset_id = self.pk).order_by('remote_id')
-        json_in = json.loads(urllib.urlopen(self.url + '?$order=' + self.remote_id_field).read())
+        if self.remote_id_field == '':
+            plus = ''
+        else:
+            plus = '$order=' + self.remote_id_field
+        json_in = json.loads(urllib.urlopen(self.url + '?' + plus).read())
+
+        #if json_in['error']:
 
         #dictionary to hold structure of data in remote dataset
         fields = {}
@@ -69,7 +72,7 @@ class Dataset(models.Model):
         i = 0
         while len(json_in) > 0:
             for item in json_in:
-                if i < len(points):
+                if i < len(points) and self.remote_id_field != '':
                     if points[i].remote_id == str(item[self.remote_id_field]):
                         i += 1
                         continue
@@ -84,16 +87,28 @@ class Dataset(models.Model):
                             temp = float(temp)
                         except:
                             continue
+                    elif len(temp) > MapPoint._meta.get_field(field).max_length:
+                        temp = temp[0:MapPoint._meta.get_field(field).max_length]
                     setattr(new_point, field, temp)
                 new_point.save() 
-            json_in = json.loads(urllib.urlopen(self.url + '?$order=' + self.remote_id_field + '&$offset=' + str(rec_read)).read())
+            json_in = json.loads(urllib.urlopen(self.url + '?' + plus + '&$offset=' + str(rec_read)).read())
             rec_read += len(json_in)
         self.cached = datetime.utcnow().replace(tzinfo=utc)
+        self.save()
+
+    def should_update(self):
+        if self.cached is None or self.cached == '':
+            return True
+        since = datetime.utcnow().replace(tzinfo=utc) - self.cached
+        if since.days < self.cache_max_age:
+            return False
+        return True
 
     def save(self, *args, **kwargs):
-        self.update_cache()
         super(Dataset, self).save(*args, **kwargs)
-        
+        if self.should_update():
+            self.update_cache()
+
 
 class MapPoint(models.Model):
 	dataset = models.ForeignKey(Dataset)
@@ -112,3 +127,12 @@ class MapPoint(models.Model):
 
 	def __unicode__(self):
 		return self.name
+
+class Tag(models.Model):
+    dataset = models.ForeignKey(Dataset)
+    mappoint = models.ForeignKey(MapPoint)
+    tag = models.CharField(max_length = 100)
+    approved = models.BooleanField(default=False)
+    
+    def __unicode__(self):
+        return self.tag
