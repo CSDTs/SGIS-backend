@@ -3,114 +3,121 @@ from django.db import models
 from datetime import datetime
 from django.utils.timezone import utc
 
-import json
-import urllib
+import json, urllib, pycurl
 
 class Dataset(models.Model):
-    name = models.CharField(max_length=200)
-    url = models.URLField(max_length=300)
-    cached = models.DateTimeField(null=True,blank=True)
-    cache_max_age = models.IntegerField('age when cache should be replaced in days',default=1)
-    #field names
-    remote_id_field = models.CharField('column name of key field on the remote server',blank=True, max_length=50, default='id')
-    name_field = models.CharField(max_length=50,default='name')
-    lat_field = models.CharField(max_length=50,default='latitude')
-    lon_field = models.CharField(max_length=50,default='longitude')
-    street_field = models.CharField(max_length=50,default='street')
-    city_field = models.CharField(max_length=50,default='city')
-    state_field = models.CharField(max_length=50,default='state')
-    zipcode_field = models.CharField(max_length=50,default='zip')
-    county_field = models.CharField(max_length=50,default='county')
-    field1_name = models.CharField(blank=True,max_length=50)
-    field2_name = models.CharField(blank=True,max_length=50)
-    field3_name = models.CharField(blank=True,max_length=50)
+	name = models.CharField(max_length=200)
+	url = models.URLField(max_length=300)
+	cached = models.DateTimeField(null=True,blank=True)
+	cache_max_age = models.IntegerField('age when cache should be replaced in days',default=1)
+	#field names
+	remote_id_field = models.CharField('column name of key field on the remote server',blank=True, max_length=50, default='id')
+	name_field = models.CharField(max_length=50,default='name')
+	lat_field = models.CharField(max_length=50,default='latitude')
+	lon_field = models.CharField(max_length=50,default='longitude')
+	street_field = models.CharField(max_length=50,default='street')
+	city_field = models.CharField(max_length=50,default='city')
+	state_field = models.CharField(max_length=50,default='state')
+	zipcode_field = models.CharField(max_length=50,default='zip')
+	county_field = models.CharField(max_length=50,default='county')
+	field1_en = models.CharField(blank=True,max_length=150)
+	field1_name = models.CharField(blank=True,max_length=50)
+	field2_en = models.CharField(blank=True,max_length=150)
+	field2_name = models.CharField(blank=True,max_length=50)
+	field3_en = models.CharField(blank=True,max_length=150)
+	field3_name = models.CharField(blank=True,max_length=50)
+	needs_geocoding = models.BooleanField(default = False)
 
-    def __unicode__(self):  # Python 3: def __str__(self):
-        return self.name
+	def __unicode__(self):  # Python 3: def __str__(self):
+		return self.name
 
-    #recurses through structure of fields and the json
-    # , = level
-    # + = concatenation of 2 or more fields.
-    def reach_field(self, json_item, location):
-        result = ''
-        if len(location) > 1:
-            for field in location[0]:
-                if field in json_item:
-                    result += self.reach_field(json_item[field], location[1:]) + ' '
-        elif len(location) == 1:
-            for field in location[0]:
-                if field in json_item:
-                    result += json_item[field].strip() + ' '
-        return result.strip()
+	#recurses through structure of fields and the json
+	# , = level
+	# + = concatenation of 2 or more fields.
+	def reach_field(self, json_item, location):
+		result = ''
+		if len(location) > 1:
+			for field in location[0]:
+				if field in json_item:
+					result += self.reach_field(json_item[field], location[1:]) + ' '
+		elif len(location) == 1:
+			for field in location[0]:
+				if field in json_item:
+					result += json_item[field].strip() + ' '
+		return result.strip()
 
-    def update_cache(self):
-    	points = MapPoint.objects.filter(dataset_id = self.pk).order_by('remote_id')
-        if self.remote_id_field == '':
-            plus = ''
-        else:
-            plus = '?$order=' + self.remote_id_field
-        json_in = json.loads(urllib.urlopen(self.url + plus).read())
-        if plus == '':
-            plus = '?'
-        else:
-            plus += '&'
-        #if json_in['error']:
 
-        #dictionary to hold structure of data in remote dataset
-        fields = {}
-        fields['remote_id'] = [x.split('+') for x in self.remote_id_field.split(',')]
-        fields['name'] = [x.split('+') for x in self.name_field.split(',')]
-        fields['lat'] = [x.split('+') for x in self.lat_field.split(',')]
-        fields['lon'] = [x.split('+') for x in self.lon_field.split(',')] 
-        fields['street'] = [x.split('+') for x in self.street_field.split(',')] 
-        fields['city'] = [x.split('+') for x in self.city_field.split(',')]
-        fields['state'] = [x.split('+') for x in self.state_field.split(',')] 
-        fields['zipcode'] = [x.split('+') for x in self.zipcode_field.split(',')] 
-        fields['county'] = [x.split('+') for x in self.county_field.split(',')]
-        fields['field1'] = [x.split('+') for x in self.field1_name.split(',')]
-        fields['field2'] = [x.split('+') for x in self.field2_name.split(',')]
-        fields['field3'] = [x.split('+') for x in self.field3_name.split(',')]
+	def update_cache(self):
+		points = MapPoint.objects.filter(dataset_id = self.pk).order_by('remote_id')
+		if self.remote_id_field == '':
+			plus = ''
+		else:
+			plus = '?$order=' + self.remote_id_field
+		json_in = json.loads(urllib.urlopen(self.url + plus).read())
+		if plus == '':
+			plus = '?'
+		else:
+			plus += '&'
+		#if json_in['error']:
 
-        rec_read = len(json_in)
-        i = 0
-        while len(json_in) > 0:
-            for item in json_in:
-                if i < len(points) and self.remote_id_field != '':
-                    if points[i].remote_id == str(item[self.remote_id_field]):
-                        i += 1
-                        continue
-                    elif points[i].remote_id < str(item[self.remote_id_field]):
-                        points[i].delete()
-                        continue
-                new_point = MapPoint(dataset = self)
-                for field in fields:
-                    temp = self.reach_field(item, fields[field])
-                    if field in ['lat','lon']:
-                        try:
-                            temp = float(temp)
-                        except:
-                            continue
-                    elif len(temp) > MapPoint._meta.get_field(field).max_length:
-                        temp = temp[0:MapPoint._meta.get_field(field).max_length]
-                    setattr(new_point, field, temp)
-                new_point.save() 
-            json_in = json.loads(urllib.urlopen(self.url + plus + '$offset=' + str(rec_read)).read())
-            rec_read += len(json_in)
-        self.cached = datetime.utcnow().replace(tzinfo=utc)
-        self.save()
+		#dictionary to hold structure of data in remote dataset
+		fields = {}
+		fields['remote_id'] = [x.split('+') for x in self.remote_id_field.split(',')]
+		fields['name'] = [x.split('+') for x in self.name_field.split(',')]
+		fields['lat'] = [x.split('+') for x in self.lat_field.split(',')]
+		fields['lon'] = [x.split('+') for x in self.lon_field.split(',')] 
+		fields['street'] = [x.split('+') for x in self.street_field.split(',')] 
+		fields['city'] = [x.split('+') for x in self.city_field.split(',')]
+		fields['state'] = [x.split('+') for x in self.state_field.split(',')] 
+		fields['zipcode'] = [x.split('+') for x in self.zipcode_field.split(',')] 
+		fields['county'] = [x.split('+') for x in self.county_field.split(',')]
+		fields['field1'] = [x.split('+') for x in self.field1_name.split(',')]
+		fields['field2'] = [x.split('+') for x in self.field2_name.split(',')]
+		fields['field3'] = [x.split('+') for x in self.field3_name.split(',')]
 
-    def should_update(self):
-        if self.cached is None or self.cached == '':
-            return True
-        since = datetime.utcnow().replace(tzinfo=utc) - self.cached
-        if since.days < self.cache_max_age:
-            return False
-        return True
+		
+		try_geocoding = self.needs_geocoding
+		rec_read = len(json_in)
+		i = 0
+		while len(json_in) > 0:
+			for item in json_in:
+				if i < len(points) and self.remote_id_field != '':
+					if points[i].remote_id == str(item[self.remote_id_field]):
+						i += 1
+						continue
+					elif points[i].remote_id < str(item[self.remote_id_field]):
+						points[i].delete()
+						continue
+				new_point = MapPoint(dataset = self)
+				for field in fields:
+					temp = self.reach_field(item, fields[field])
+					if field in ['lat','lon']:
+						try:
+							temp = float(temp)
+						except:
+							continue
+					elif len(temp) > MapPoint._meta.get_field(field).max_length:
+						temp = temp[0:MapPoint._meta.get_field(field).max_length]
+					setattr(new_point, field, temp)
+				if try_geocoding:
+					r = new_point.geocode()
+					if r['status'] == 'OVER_QUERY_LIMIT':
+						try_geocoding = False
+				new_point.save() 
+			json_in = json.loads(urllib.urlopen(self.url + plus + '$offset=' + str(rec_read)).read())
+			rec_read += len(json_in)
+		self.cached = datetime.utcnow().replace(tzinfo=utc)
+		if try_geocoding: #if still able to geocode, must have completed set
+			self.needs_geocoding = False
+		self.save()
 
-    def save(self, *args, **kwargs):
-        super(Dataset, self).save(*args, **kwargs)
-        if self.should_update():
-            self.update_cache()
+	def should_update(self):
+		if self.cached is None or self.cached == '':
+			return True
+		since = datetime.utcnow().replace(tzinfo=utc) - self.cached
+		if since.days < self.cache_max_age:
+			return False
+		return True
 
 
 class MapPoint(models.Model):
@@ -127,15 +134,34 @@ class MapPoint(models.Model):
 	field1 = models.CharField(blank=True,max_length=200)
 	field2 = models.CharField(blank=True,max_length=200)
 	field3 = models.CharField(blank=True,max_length=200)
+	geocoded = models.BooleanField(default = False)
 
 	def __unicode__(self):
 		return self.name
 
+	def geocode(self, unknown_count = 0):
+		key = 'AIzaSyDazxNgLILi-BIkhWUqgodvdQgdcWu29_g'
+		location = urllib.quote_plus(self.street + ', ' + self.city + ', ' + self.state + ', ' + self.zipcode)
+		request = 'https://maps.googleapis.com/maps/api/geocode/json?address=%s&key=%s&sensor=false' % (location, key)
+		j = json.loads(urllib.urlopen(request).read())
+		if j['status'] == 'OK':
+			try:
+				self.lat = float(j['results']['geometry']['location']['lat'])
+				self.lon = float(j['results']['geometry']['location']['lng'])
+				self.geocoded = True
+			except:
+				return  {'status':'conversion_error','request': request}
+		elif j['status'] == 'UNKNOWN_ERROR' and unknown_count < 5: #this error type means the request can be retried
+			return self.geocode(unknown_count + 1)
+
+		assert j['status'] == 'OK' or j['status'] == 'OVER_QUERY_LIMIT' or j['status'] == 'ZERO_RESULTS' #want to debug other errors
+		return {'status': j['status'], 'request': request}
+
 class Tag(models.Model):
-    dataset = models.ForeignKey(Dataset)
-    mappoint = models.ForeignKey(MapPoint)
-    tag = models.CharField(max_length = 100)
-    approved = models.BooleanField(default=False)
-    
-    def __unicode__(self):
-        return self.tag
+	dataset = models.ForeignKey(Dataset)
+	mappoint = models.ForeignKey(MapPoint)
+	tag = models.CharField(max_length = 100)
+	approved = models.BooleanField(default=False)
+	
+	def __unicode__(self):
+		return self.tag

@@ -1,11 +1,16 @@
+from django.db.models import Count
 from django.shortcuts import render
 from gis.models import Dataset, MapPoint, Tag
 #from django.contrib.auth.models import User, Group
 from rest_framework import viewsets
-from gis.serializers import DatasetSerializer, MapPointSerializer, TagSerializer
+from gis.serializers import TagCountSerializer, DatasetSerializer, MapPointSerializer, TagSerializer
 
 class TagViewSet(viewsets.ModelViewSet):
+    queryset = Tag.objects.filter(approved=True)
     serializer_class = TagSerializer
+
+class TagCountViewSet(viewsets.ModelViewSet):
+    serializer_class = TagCountSerializer
     model = Tag
 
     def get_queryset(self):

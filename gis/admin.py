@@ -6,7 +6,9 @@ class DatasetAdmin(admin.ModelAdmin):
         (None,               {'fields': ['name','url','cache_max_age']}),
         ('Field Mapping',	{'fields': ['remote_id_field','name_field','lat_field','lon_field',
         							'street_field','city_field','state_field','zipcode_field',
-        							'county_field','field1_name','field2_name','field3_name']})]
+        							'county_field']}),
+        ('Custom Fields',	{'fields': ['field1_en','field1_name','field2_en','field2_name','field3_en','field3_name']}),
+        ('Geocoding',		{'fields': ['needs_geocoding']})]
 
 admin.site.register(Dataset, DatasetAdmin)
 #for testing
