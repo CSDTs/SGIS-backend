@@ -3,7 +3,9 @@ from django.db import models
 from datetime import datetime
 from django.utils.timezone import utc
 
-import json, urllib, pycurl
+import json, urllib, pycurl, decimal
+
+BATCH_SIZE = 5000
 
 class Dataset(models.Model):
 	name = models.CharField(max_length=200)
@@ -46,8 +48,22 @@ class Dataset(models.Model):
 					result += json_item[field].strip() + ' '
 		return result.strip()
 
+	def update_mappoints(self):
+		if self.should_update():
+			self.loop_thru_cache()
+		elif self.needs_geocoding:
+			for point in MapPoint.objects.filter(dataset_id = self.pk).order_by('remote_id'):
+				if not point.geocoded:
+					r = point.geocode()
+					if r['status'] == 'OVER_QUERY_LIMIT':
+						return # ENDS FUNCTION
+					point.save()
+			self.needs_geocoding = False
+			self.save()
 
-	def update_cache(self):
+	def loop_thru_cache(self):
+		batched = 0
+
 		points = MapPoint.objects.filter(dataset_id = self.pk).order_by('remote_id')
 		if self.remote_id_field == '':
 			plus = ''
@@ -93,7 +109,7 @@ class Dataset(models.Model):
 					temp = self.reach_field(item, fields[field])
 					if field in ['lat','lon']:
 						try:
-							temp = float(temp)
+							temp = decimal.Decimal(temp)
 						except:
 							continue
 					elif len(temp) > MapPoint._meta.get_field(field).max_length:
@@ -104,18 +120,23 @@ class Dataset(models.Model):
 					if r['status'] == 'OVER_QUERY_LIMIT':
 						try_geocoding = False
 				new_point.save() 
+				batched += 1
+				if batched >= BATCH_SIZE:
+					print '--%d batched--' %(batched)
+					return
 			json_in = json.loads(urllib.urlopen(self.url + plus + '$offset=' + str(rec_read)).read())
 			rec_read += len(json_in)
 		self.cached = datetime.utcnow().replace(tzinfo=utc)
 		if try_geocoding: #if still able to geocode, must have completed set
 			self.needs_geocoding = False
+		print '--%d batched--' %(batched)
 		self.save()
 
 	def should_update(self):
 		if self.cached is None or self.cached == '':
 			return True
 		since = datetime.utcnow().replace(tzinfo=utc) - self.cached
-		if since.days < self.cache_max_age:
+		if since.days < self.cache_max_age or since.seconds < 60:
 			return False
 		return True
 
@@ -124,8 +145,8 @@ class MapPoint(models.Model):
 	dataset = models.ForeignKey(Dataset)
 	remote_id = models.CharField(max_length=50)
 	name = models.CharField(max_length=150)
-	lat = models.FloatField()
-	lon = models.FloatField()
+	lat = models.DecimalField(max_digits=17, decimal_places=15)
+	lon = models.DecimalField(max_digits=17, decimal_places=15)
 	street = models.CharField(max_length=200)
 	city = models.CharField(max_length=100)
 	state = models.CharField(max_length=2)
@@ -146,8 +167,8 @@ class MapPoint(models.Model):
 		j = json.loads(urllib.urlopen(request).read())
 		if j['status'] == 'OK':
 			try:
-				self.lat = float(j['results']['geometry']['location']['lat'])
-				self.lon = float(j['results']['geometry']['location']['lng'])
+				self.lat = decimal.Decimal(j['results'][0]['geometry']['location']['lat'])
+				self.lon = decimal.Decimal(j['results'][0]['geometry']['location']['lng'])
 				self.geocoded = True
 			except:
 				return  {'status':'conversion_error','request': request}
@@ -155,6 +176,8 @@ class MapPoint(models.Model):
 			return self.geocode(unknown_count + 1)
 
 		assert j['status'] == 'OK' or j['status'] == 'OVER_QUERY_LIMIT' or j['status'] == 'ZERO_RESULTS' #want to debug other errors
+		if j['status'] == 'OVER_QUERY_LIMIT':
+			print 'Hit Google Maps API daily query limit'
 		return {'status': j['status'], 'request': request}
 
 class Tag(models.Model):
