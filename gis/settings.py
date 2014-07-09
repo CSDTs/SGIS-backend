@@ -170,6 +170,8 @@ REST_FRAMEWORK = {
     'PAGINATE_BY': 10
 }
 
+GOOGLE_API_KEY = 'AIzaSyDazxNgLILi-BIkhWUqgodvdQgdcWu29_g'
+
 try:
     from local_settings import *
 except:
