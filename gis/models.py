@@ -2,6 +2,7 @@ from django.db import models
 #from django.contrib.gis.db import models #may need to switch to this later
 from datetime import datetime
 from django.utils.timezone import utc
+from django.conf import settings
 
 import json, urllib, pycurl, decimal
 
@@ -161,7 +162,7 @@ class MapPoint(models.Model):
 		return self.name
 
 	def geocode(self, unknown_count = 0):
-		key = 'AIzaSyDazxNgLILi-BIkhWUqgodvdQgdcWu29_g'
+		key = settings.GOOGLE_API_KEY
 		location = urllib.quote_plus(self.street + ', ' + self.city + ', ' + self.state + ', ' + self.zipcode)
 		request = 'https://maps.googleapis.com/maps/api/geocode/json?address=%s&key=%s&sensor=false' % (location, key)
 		j = json.loads(urllib.urlopen(request).read())
