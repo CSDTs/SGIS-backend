@@ -6,4 +6,4 @@ def update_mappoints(sender, **kwargs):
 	dataset = kwargs.get('instance')
 	dataset.update_mappoints()
 	
-post_save.connect(update_mappoints, sender=Dataset)
+#post_save.connect(update_mappoints, sender=Dataset)

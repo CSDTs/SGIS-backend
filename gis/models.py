@@ -63,7 +63,8 @@ class Dataset(models.Model):
 			self.save()
 
 	def loop_thru_cache(self):
-		batched = 0
+		added = 0
+		geocoded = 0
 
 		points = MapPoint.objects.filter(dataset_id = self.pk).order_by('remote_id')
 		if self.remote_id_field == '':
@@ -101,6 +102,13 @@ class Dataset(models.Model):
 				if i < len(points) and self.remote_id_field != '':
 					if points[i].remote_id == str(item[self.remote_id_field]):
 						i += 1
+						if try_geocoding and not points[i].geocoded:
+							r = points[i].geocode()
+							if r['status'] == 'OVER_QUERY_LIMIT':
+								try_geocoding = False
+								print '--%d geocoded--' %(geocoded)
+							else:
+								geocoded += 1
 						continue
 					elif points[i].remote_id < str(item[self.remote_id_field]):
 						points[i].delete()
@@ -120,17 +128,19 @@ class Dataset(models.Model):
 					r = new_point.geocode()
 					if r['status'] == 'OVER_QUERY_LIMIT':
 						try_geocoding = False
+					else:
+						geocoded += 1
 				new_point.save() 
-				batched += 1
-				if batched >= BATCH_SIZE:
-					print '--%d batched--' %(batched)
+				added += 1
+				if added >= BATCH_SIZE:
+					print '--%d added--' %(added, geocoded)
 					return
 			json_in = json.loads(urllib.urlopen(self.url + plus + '$offset=' + str(rec_read)).read())
 			rec_read += len(json_in)
 		self.cached = datetime.utcnow().replace(tzinfo=utc)
 		if try_geocoding: #if still able to geocode, must have completed set
 			self.needs_geocoding = False
-		print '--%d batched--' %(batched)
+		print '--%d added, %d geocoded--' %(added,geocoded)
 		self.save()
 
 	def should_update(self):

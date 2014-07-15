@@ -20,6 +20,9 @@ class DatasetSerializer(serializers.HyperlinkedModelSerializer):
 		model = Dataset
 		fields = ('id','name','cached','field1_en','field2_en','field3_en')
 class MapPointSerializer(serializers.HyperlinkedModelSerializer):
+	latitude = serializers.DecimalField(source = 'lat')
+	longitude = serializers.DecimalField(source = 'lon')
+
 	class Meta:
 		model = MapPoint 
-		fields = ('dataset','id','name','lat','lon','street','city','state','zipcode','county','field1','field2','field3')
+		fields = ('dataset','id','name','latitude','longitude','street','city','state','zipcode','county','field1','field2','field3')
