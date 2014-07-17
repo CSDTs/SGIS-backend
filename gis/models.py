@@ -1,4 +1,4 @@
-from django.db import models
+from django.contrib.gis.db import models
 #from django.contrib.gis.db import models #may need to switch to this later
 from datetime import datetime
 from django.utils.timezone import utc
@@ -10,7 +10,7 @@ BATCH_SIZE = 5000
 
 class Dataset(models.Model):
 	name = models.CharField(max_length=200)
-	url = models.URLField(max_length=300)
+	url = models.URLField(blank=True,max_length=300)
 	cached = models.DateTimeField(null=True,blank=True)
 	cache_max_age = models.IntegerField('age when cache should be replaced in days',default=1)
 	#field names
@@ -50,6 +50,8 @@ class Dataset(models.Model):
 		return result.strip()
 
 	def update_mappoints(self):
+		if self.url == '': #this can only be done through manual updates
+			return
 		if self.should_update():
 			self.loop_thru_cache()
 		elif self.needs_geocoding:
@@ -190,6 +192,24 @@ class MapPoint(models.Model):
 		if j['status'] == 'OVER_QUERY_LIMIT':
 			print 'Hit Google Maps API daily query limit'
 		return {'status': j['status'], 'request': request}
+
+class MapPolygon(models.Model):
+	dataset = models.ForeignKey(Dataset,null=True)
+	remote_id = models.CharField(max_length=50)
+	name = models.CharField(max_length=150)
+	lat = models.CharField(max_length=17)
+	lon = models.CharField(max_length=17)
+	field1 = models.FloatField(blank=True,null=True,max_length=200)
+	field2 = models.FloatField(blank=True,null=True,max_length=200)
+	field3 = models.FloatField(blank=True,null=True,max_length=200)
+
+	mpoly = models.MultiPolygonField()
+	objects = models.GeoManager()
+
+	def __unicode__(self):
+		return self.name
+
+
 
 class Tag(models.Model):
 	dataset = models.ForeignKey(Dataset)

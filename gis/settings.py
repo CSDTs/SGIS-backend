@@ -14,7 +14,7 @@ MANAGERS = ADMINS
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'ENGINE': 'django.contrib.gis.db.backends.postgis',
         'NAME': 'django_test',
         'USER': 'django_user',
         'PASSWORD': 'dj4ng0_t3st',
@@ -125,6 +125,8 @@ INSTALLED_APPS = (
     'django.contrib.admindocs',
     'rest_framework',
     'django_extensions',
+    'django.contrib.admin', 
+    'django.contrib.gis',
     'gis',
 )
 
