@@ -113,6 +113,7 @@ class Dataset(models.Model):
 								geocoded += 1
 						continue
 					elif points[i].remote_id < str(item[self.remote_id_field]):
+						print 'Deleting point:', points[i]
 						points[i].delete()
 						continue
 				new_point = MapPoint(dataset = self)

@@ -1,4 +1,4 @@
-from gis.models import Dataset, MapPoint, Tag
+from gis.models import Dataset, MapPoint, Tag, MapPolygon
 from rest_framework import serializers
 
 class TagSerializer(serializers.HyperlinkedModelSerializer):
@@ -26,3 +26,11 @@ class MapPointSerializer(serializers.HyperlinkedModelSerializer):
 	class Meta:
 		model = MapPoint 
 		fields = ('dataset','id','name','latitude','longitude','street','city','state','zipcode','county','field1','field2','field3')
+
+class MapPolygonSerializer(serializers.HyperlinkedModelSerializer):
+	latitude = serializers.DecimalField(source = 'lat')
+	longitude = serializers.DecimalField(source = 'lon')
+
+	class Meta:
+		model = MapPolygon 
+		fields = ('dataset','remote_id','name','lat','lon','field1','field2','mpoly')
