@@ -31,7 +31,7 @@ def tag_list(request):
 '''
 
 class TagViewSet(viewsets.ModelViewSet):
-    queryset = Tag.objects.filter(approved=True)
+    queryset = Tag.objects.filter(approved=True).distinct('dataset','tag')
     serializer_class = TagSerializer
 
 class TagCountViewSet(viewsets.ModelViewSet):
@@ -39,8 +39,11 @@ class TagCountViewSet(viewsets.ModelViewSet):
     model = Tag
 
     def get_queryset(self):
-    	queryset = Tag.objects.filter(approved = True).values('tag').annotate(num_tags = Count('id')).order_by()
-    	return Tag.objects.all()
+    	queryset = Tag.objects.filter(approved = True) #only include approved tags
+        queryset = queryset.values('dataset','tag').annotate(num_tags = Count('id'))
+        #queryset = queryset.values('dataset','tag','num_tags')
+        print queryset
+    	return queryset
 
 class DatasetViewSet(viewsets.ModelViewSet):
     queryset = Dataset.objects.all()

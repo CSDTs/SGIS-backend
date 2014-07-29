@@ -115,6 +115,7 @@ class Dataset(models.Model):
 					elif points[i].remote_id < str(item[self.remote_id_field]):
 						print 'Deleting point:', points[i]
 						points[i].delete()
+
 						continue
 				new_point = MapPoint(dataset = self)
 				for field in fields:
@@ -213,7 +214,7 @@ class MapPolygon(models.Model):
 
 
 class Tag(models.Model):
-	dataset = models.ForeignKey(Dataset)
+	dataset = models.ForeignKey(Dataset, related_name = 'tags')
 	mappoint = models.ForeignKey(MapPoint)
 	tag = models.CharField(max_length = 100)
 	approved = models.BooleanField(default=False)
