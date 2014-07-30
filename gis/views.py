@@ -5,51 +5,27 @@ from rest_framework import viewsets
 
 from gis.models import Dataset, MapPoint, Tag, MapPolygon
 from gis.serializers import TagCountSerializer, DatasetSerializer, MapPointSerializer, TagSerializer, MapPolygonSerializer
-'''from tutorial
-from rest_framework import status
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
 
-
-@api_view(['GET', 'POST'])
-def tag_list(request):
-    """
-    List all snippets, or create a new snippet.
-    """
-    if request.method == 'GET':
-        tags = Tag.objects.all()
-        serializer = SnippetSerializer(snippets, many=True)
-        return Response(serializer.data)
-
-    elif request.method == 'POST':
-        serializer = SnippetSerializer(data=request.DATA)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-'''
 
 class TagViewSet(viewsets.ModelViewSet):
     queryset = Tag.objects.filter(approved=True).distinct('dataset','tag')
     serializer_class = TagSerializer
 
-class TagCountViewSet(viewsets.ModelViewSet):
+    #http://www.django-rest-framework.org/api-guide/permissions
+    #permission_classes = (permissions.IsAuthenticatedOrReadOnly)
+
+class TagCountViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = TagCountSerializer
     model = Tag
 
     def get_queryset(self):
-    	queryset = Tag.objects.filter(approved = True) #only include approved tags
-        queryset = queryset.values('dataset','tag').annotate(num_tags = Count('id'))
-        #queryset = queryset.values('dataset','tag','num_tags')
-        print queryset
-    	return queryset
+    	return Tag.objects.filter(approved = True).values('dataset','tag').annotate(num_tags = Count('id'))
 
-class DatasetViewSet(viewsets.ModelViewSet):
+class DatasetViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Dataset.objects.all()
     serializer_class = DatasetSerializer
 
-class MapPointViewSet(viewsets.ModelViewSet):
+class MapPointViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = MapPointSerializer
     model = MapPoint
 
@@ -92,7 +68,7 @@ class MapPointViewSet(viewsets.ModelViewSet):
 	    		queryset = queryset.filter(zipcode__iexact = result)
         return queryset
 
-class MapPolygonViewSet(viewsets.ModelViewSet):
+class MapPolygonViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = MapPolygonSerializer
     model = MapPolygon
 

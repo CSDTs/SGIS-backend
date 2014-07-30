@@ -9,7 +9,7 @@ router = routers.DefaultRouter()
 router.register(r'api-ds', views.DatasetViewSet)
 router.register(r'api-mp', views.MapPointViewSet, base_name = 'mappoint')
 router.register(r'api-poly', views.MapPolygonViewSet, base_name = 'mappolygon')
-router.register(r'api-tag/count', views.TagCountViewSet, base_name = 'tag')
+#router.register(r'api-tag/count', views.TagCountViewSet, base_name = 'tag')
 router.register(r'api-tag', views.TagViewSet)
 
 urlpatterns = patterns('',
