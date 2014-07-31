@@ -1,5 +1,5 @@
 from django.contrib import admin
-from gis.models import Dataset, MapPoint, Tag, MapPolygon
+from gis.models import Dataset, MapPoint, Tag, MapPolygon, TagIndiv
 
 class DatasetAdmin(admin.ModelAdmin):
     fieldsets = [
@@ -15,3 +15,4 @@ admin.site.register(Dataset, DatasetAdmin)
 admin.site.register(MapPoint)
 admin.site.register(Tag)
 admin.site.register(MapPolygon)
+admin.site.register(TagIndiv)

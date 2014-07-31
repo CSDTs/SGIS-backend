@@ -1,29 +1,30 @@
-from gis.models import Dataset, MapPoint, Tag, MapPolygon
+from gis.models import Dataset, MapPoint, Tag, TagIndiv, MapPolygon
 from rest_framework import serializers
 from rest_framework_gis import serializers as gis_serializers
 
-class NestedTagSerializer(serializers.HyperlinkedModelSerializer):
+class NestedTagSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tag 
-        fields = ['tags']
+        fields = ['tag']
 
-class TagSerializer(serializers.HyperlinkedModelSerializer):
+class TagSerializer(serializers.ModelSerializer):
+    #tag = NestedTagSerializer(many = False)
+    # this is readonly: tag = serializers.RelatedField()
     class Meta:
-        model = Tag 
-        fields = ['dataset','mappoint','tag']
+        depth = 1
+        model = TagIndiv
+        fields = ('mappoint','tag')
 
 class TagCountSerializer(serializers.HyperlinkedModelSerializer):
-    num_tags = serializers.Field(
-        source='tags.num_tags')
     class Meta:
         model = Tag 
-        fields = ['dataset','tag','num_tags']
+        fields = ['dataset','tag','count']
 
 class DatasetSerializer(serializers.ModelSerializer):
     tags = serializers.SerializerMethodField('get_tags')
     def get_tags(self, dataset):
         #build nested distinct list
-        return Tag.objects.filter(approved=True, dataset=dataset).distinct('tag').values_list('tag', flat=True)
+        return Tag.objects.filter(approved=True, dataset=dataset).order_by('-count').values_list('tag', flat=True)
 
     class Meta:
         model = Dataset
@@ -36,7 +37,7 @@ class MapPointSerializer(serializers.HyperlinkedModelSerializer):
     tags = serializers.SerializerMethodField('get_tags')
     def get_tags(self, mappoint):
         #build nested distinct list
-        return Tag.objects.filter(approved=True, mappoint=mappoint).distinct('tag').values_list('tag', flat=True)
+        return Tag.objects.filter(approved=True, tagIndiv__mappoint=mappoint).distinct('tag').values_list('tag', flat=True)
 
     class Meta:
         model = MapPoint 

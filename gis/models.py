@@ -3,6 +3,7 @@ from django.contrib.gis.db import models
 from datetime import datetime
 from django.utils.timezone import utc
 from django.conf import settings
+from django.db.models import Q#, Count
 
 import json, urllib, pycurl, decimal
 
@@ -169,6 +170,7 @@ class MapElement(models.Model):
 
 	def __unicode__(self):
 		return self.name
+
 	class Meta:
 		abstract = True
 
@@ -180,7 +182,6 @@ class MapPoint(MapElement):
 	zipcode = models.CharField(max_length=5)
 	county = models.CharField(max_length=75)
 	geocoded = models.BooleanField(default = False)
-
 
 	def geocode(self, unknown_count = 0):
 		key = settings.GOOGLE_API_KEY
@@ -205,13 +206,29 @@ class MapPoint(MapElement):
 class MapPolygon(MapElement):
 	mpoly = models.MultiPolygonField()
 
-
-
 class Tag(models.Model):
 	dataset = models.ForeignKey(Dataset, related_name = 'tags')
-	mappoint = models.ForeignKey(MapPoint)
 	tag = models.CharField(max_length = 100)
 	approved = models.BooleanField(default=False)
+	count = models.IntegerField(default=0)
 	
 	def __unicode__(self):
 		return self.tag
+
+	def increment_count(self, save=True): #not necessary, but would rather have the code centralized
+		self.count += 1
+		if save:
+			self.save()
+
+	def recount(self, save=True):
+		self.count = TagIndiv.objects.filter(Q(tag=self), Q(mappoint__dataset_id=self.dataset_id) | Q(mappoint__dataset_id=self.dataset_id)).count()
+		if save:
+			self.save()
+
+class TagIndiv(models.Model):
+	tag = models.ForeignKey(Tag)
+	mappoint = models.ForeignKey(MapPoint, null = True, blank = True)
+	mappolygon = models.ForeignKey(MapPolygon, null = True, blank = True)
+
+	def __unicode__(self):
+		return self.mappoint.name + ' tagged as "' + self.tag.tag + '"'

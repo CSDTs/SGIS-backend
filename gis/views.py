@@ -3,12 +3,12 @@ from django.shortcuts import render
 #from django.contrib.auth.models import User, Group
 from rest_framework import viewsets
 
-from gis.models import Dataset, MapPoint, Tag, MapPolygon
+from gis.models import Dataset, MapPoint, Tag, MapPolygon, TagIndiv
 from gis.serializers import TagCountSerializer, DatasetSerializer, MapPointSerializer, TagSerializer, MapPolygonSerializer
 
 
 class TagViewSet(viewsets.ModelViewSet):
-    queryset = Tag.objects.filter(approved=True).distinct('dataset','tag')
+    queryset = TagIndiv.objects.filter(tag__approved=True).distinct('tag')
     serializer_class = TagSerializer
 
     #http://www.django-rest-framework.org/api-guide/permissions
