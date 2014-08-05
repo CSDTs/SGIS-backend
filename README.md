@@ -27,18 +27,12 @@ Everything else:
 #### PostgreSQL and PostGIS
 Install all postgres things needed:
 
-```sudo apt-get install postgresql-9.3 postgresql-9.3-postgis-2.1 pgadmin3 postgresql-contrib```
-
-```sudo -u postgres psql <database name>```
-
-_CREATE DATABASE stuff_
-
 ```
-CREATE EXTENSION adminpack;
-CREATE EXTENSION postgis;
-CREATE EXTENSION postgis_topology;
-\q
+$ sudo apt-get install postgresql-9.3 postgresql-9.3-postgis-2.1 pgadmin3 postgresql-contrib```
+$ sudo su - postgres
+$ createdb django_test
 ```
+
 
 #### GeoDjango
 ref: https://docs.djangoproject.com/en/dev/ref/contrib/gis/install/geolibs/
@@ -46,9 +40,9 @@ ref: https://docs.djangoproject.com/en/dev/ref/contrib/gis/install/geolibs/
 Install GEOS
 
 ```
-$ wget http://download.osgeo.org/geos/geos-3.3.8.tar.bz2
-$ tar xjf geos-3.3.8.tar.bz2
-$ cd geos-3.3.8
+$ wget http://download.osgeo.org/geos/geos-3.4.2.tar.bz2
+$ tar xjf geos-3.4.2.tar.bz2
+$ cd geos-3.4.2
 $ ./configure
 $ make
 $ sudo make install
@@ -68,6 +62,21 @@ $ ./configure
 $ make
 $ sudo make install
 $ cd ..
+```
+
+Set up PostGIS
+
+```
+$ sudo su - postgres
+$ psql django_test
+```
+
+```
+> CREATE USER django_user WITH PASSWORD 'dj4ng0_t3st';
+> CREATE EXTENSION adminpack;
+> CREATE EXTENSION postgis;
+> CREATE EXTENSION postgis_topology;
+> \q
 ```
 
 #### Scheduled jobs (optional)
