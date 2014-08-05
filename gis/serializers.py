@@ -55,7 +55,7 @@ class MapPointSerializer(serializers.HyperlinkedModelSerializer):
     tags = serializers.SerializerMethodField('get_tags')
     def get_tags(self, mappoint):
         #build nested distinct list
-        return Tag.objects.filter(approved=True, tagIndiv__mappoint=mappoint).distinct('tag').values_list('tag', flat=True)
+        return Tag.objects.filter(approved=True, tagindiv__mappoint=mappoint).distinct('tag').values_list('tag', flat=True)
 
     class Meta:
         model = MapPoint 
