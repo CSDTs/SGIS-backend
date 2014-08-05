@@ -104,7 +104,6 @@ class Dataset(models.Model):
 			for item in json_in:
 				if i < len(points) and self.remote_id_field != '':
 					if points[i].remote_id == str(item[self.remote_id_field]):
-						i += 1
 						if try_geocoding and not points[i].geocoded:
 							r = points[i].geocode()
 							if r['status'] == 'OVER_QUERY_LIMIT':
@@ -112,6 +111,7 @@ class Dataset(models.Model):
 								print '--%d geocoded--' %(geocoded)
 							else:
 								geocoded += 1
+						i += 1
 						continue
 					elif points[i].remote_id < str(item[self.remote_id_field]):
 						print 'Deleting point:', points[i]
@@ -120,8 +120,13 @@ class Dataset(models.Model):
 						continue
 				new_point = MapPoint(dataset = self)
 				for field in fields:
-					temp = self.reach_field(item, fields[field])
+					temp = self.reach_field(item, fields[field]).strip()
 					if field in ['lat','lon']:
+						l = len(temp)
+						if l > 19 and temp[0] == '-':
+							temp = temp[:19]
+						elif l > 18:
+							temp = temp[:18]
 						try:
 							temp = decimal.Decimal(temp)
 						except:
@@ -135,10 +140,18 @@ class Dataset(models.Model):
 						try_geocoding = False
 					else:
 						geocoded += 1
-				new_point.save() 
+				try:
+					new_point.save()
+				except:
+					new_point.lat = decimal.Decimal("0")
+					new_point.lon = decimal.Decimal("0")
+					new_point.save()
 				added += 1
 				if added >= BATCH_SIZE:
-					print '--%d added--' %(added, geocoded)
+					if try_geocoding:
+						print '--%d added, %d geocoded--' %(added, geocoded)
+					else:
+						print '--%d added--' %(added)
 					return
 			json_in = json.loads(urllib.urlopen(self.url + plus + '$offset=' + str(rec_read)).read())
 			rec_read += len(json_in)

@@ -8,12 +8,30 @@ class NestedTagSerializer(serializers.ModelSerializer):
         fields = ['tag']
 
 class TagSerializer(serializers.ModelSerializer):
-    #tag = NestedTagSerializer(many = False)
-    # this is readonly: tag = serializers.RelatedField()
     class Meta:
-        depth = 1
         model = TagIndiv
         fields = ('mappoint','tag')
+
+class NewTagSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TagIndiv
+        fields = ('mappoint','tag')
+
+    def restore_object(self, attrs, instance=None):
+        #only react to a post
+        if not instance:
+            #find the mappoint
+            mp = MapPoint.objects.get(id=attrs['mappoint']) 
+            if len(mp) == 0:
+                return None
+            mp = mp[0]
+            #create a new tag
+            new_tag = Tag(dataset = mp.dataset, tag = attrs['tag'])
+            new_tag.save()
+            attrs['tag'] = new_tag.id
+            instance = super().restore_object(attrs, instance)
+
+        return instance
 
 class TagCountSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
@@ -24,7 +42,7 @@ class DatasetSerializer(serializers.ModelSerializer):
     tags = serializers.SerializerMethodField('get_tags')
     def get_tags(self, dataset):
         #build nested distinct list
-        return Tag.objects.filter(approved=True, dataset=dataset).order_by('-count').values_list('tag', flat=True)
+        return Tag.objects.filter(approved=True, dataset=dataset).order_by('-count').values('id','tag')
 
     class Meta:
         model = Dataset
