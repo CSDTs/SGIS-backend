@@ -4,22 +4,22 @@ from django.shortcuts import render
 from rest_framework import viewsets, permissions
 
 from gis.models import Dataset, MapPoint, Tag, MapPolygon, TagIndiv
-from gis.serializers import TagCountSerializer, DatasetSerializer, MapPointSerializer, TagSerializer, MapPolygonSerializer
+from gis.serializers import TagCountSerializer, DatasetSerializer, MapPointSerializer, NewTagSerializer, TagSerializer, NewTagSerializer, MapPolygonSerializer
 
-
-class NewTagViewSet(viewsets.ModelViewSet):
-    queryset = TagIndiv.objects.filter(tag__approved=True).distinct('tag')
-    serializer_class = NewTagSerializer
-
-    #http://www.django-rest-framework.org/api-guide/permissions
-    permission_classes = (permissions.AllowAny,)#(permissions.IsAuthenticatedOrReadOnly,)
 
 class TagViewSet(viewsets.ModelViewSet):
     queryset = TagIndiv.objects.filter(tag__approved=True).distinct('tag')
     serializer_class = TagSerializer
 
     #http://www.django-rest-framework.org/api-guide/permissions
-    permission_classes = (permissions.AllowAny,)#(permissions.IsAuthenticatedOrReadOnly,)
+    permission_classes = (permissions.AllowAny,)#(permissions.IsAuthenticatedOrReadOnly)
+
+class NewTagViewSet(viewsets.ModelViewSet):
+    queryset = TagIndiv.objects.filter(tag__approved=True).distinct('tag')
+    serializer_class = NewTagSerializer
+
+    #http://www.django-rest-framework.org/api-guide/permissions
+    permission_classes = (permissions.AllowAny,)#(permissions.IsAuthenticatedOrReadOnly)
 
 class TagCountViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = TagCountSerializer
