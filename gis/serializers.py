@@ -13,6 +13,7 @@ class TagSerializer(serializers.ModelSerializer):
         fields = ('mappoint','tag')
 
 class NewTagSerializer(serializers.ModelSerializer):
+    tag = serializers.CharField(max_length=100)
     class Meta:
         model = TagIndiv
         fields = ('mappoint','tag')
