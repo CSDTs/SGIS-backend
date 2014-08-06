@@ -96,7 +96,7 @@ class Dataset(models.Model):
 		fields['field2'] = [x.split('+') for x in self.field2_name.split(',')]
 		fields['field3'] = [x.split('+') for x in self.field3_name.split(',')]
 
-		
+
 		try_geocoding = self.needs_geocoding
 		rec_read = len(json_in)
 		i = 0
@@ -169,14 +169,12 @@ class Dataset(models.Model):
 			return False
 		return True
 
-
-class MapPoint(models.Model):
+class MapElement(models.Model):
 	dataset = models.ForeignKey(Dataset)
 	remote_id = models.CharField(max_length=50)
 	name = models.CharField(max_length=150)
 	lat = models.DecimalField(max_digits=17, decimal_places=15)
 	lon = models.DecimalField(max_digits=17, decimal_places=15)
-<<<<<<< HEAD
 	field1 = models.CharField(blank=True,max_length=200)
 	field2 = models.CharField(blank=True,max_length=200)
 	field3 = models.CharField(blank=True,max_length=200)
@@ -191,24 +189,13 @@ class MapPoint(models.Model):
 
 
 class MapPoint(MapElement):
-=======
->>>>>>> parent of 8e6a9e7... converted mappoints and mappolygons to be subclasses of the abstract base class mapelement
 	street = models.CharField(max_length=200)
 	city = models.CharField(max_length=100)
 	state = models.CharField(max_length=2)
 	zipcode = models.CharField(max_length=5)
 	county = models.CharField(max_length=75)
-	field1 = models.CharField(blank=True,max_length=200)
-	field2 = models.CharField(blank=True,max_length=200)
-	field3 = models.CharField(blank=True,max_length=200)
 	geocoded = models.BooleanField(default = False)
 
-<<<<<<< HEAD
-=======
-	def __unicode__(self):
-		return self.name
-
->>>>>>> parent of 8e6a9e7... converted mappoints and mappolygons to be subclasses of the abstract base class mapelement
 	def geocode(self, unknown_count = 0):
 		key = settings.GOOGLE_API_KEY
 		location = urllib.quote_plus(self.street + ', ' + self.city + ', ' + self.state + ', ' + self.zipcode)
@@ -229,28 +216,15 @@ class MapPoint(MapElement):
 			print 'Hit Google Maps API daily query limit'
 		return {'status': j['status'], 'request': request}
 
-class MapPolygon(models.Model):
-	dataset = models.ForeignKey(Dataset,null=True)
-	remote_id = models.CharField(max_length=50)
-	name = models.CharField(max_length=150)
-	lat = models.CharField(max_length=17)
-	lon = models.CharField(max_length=17)
-	field1 = models.FloatField(blank=True,null=True,max_length=200)
-	field2 = models.FloatField(blank=True,null=True,max_length=200)
-	field3 = models.FloatField(blank=True,null=True,max_length=200)
-
+class MapPolygon(MapElement):
 	mpoly = models.MultiPolygonField()
-	objects = models.GeoManager()
-
-	def __unicode__(self):
-		return self.name
 
 class Tag(models.Model):
 	dataset = models.ForeignKey(Dataset, related_name = 'tags')
 	tag = models.CharField(max_length = 100)
 	approved = models.BooleanField(default=False)
 	count = models.IntegerField(default=0)
-	
+
 	def __unicode__(self):
 		return self.tag
 
