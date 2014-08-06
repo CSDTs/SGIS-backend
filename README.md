@@ -34,8 +34,7 @@ $ createdb django_test
 ```
 
 
-#### GeoDjango
-ref: https://docs.djangoproject.com/en/dev/ref/contrib/gis/install/geolibs/
+GeoDjango (ref: https://docs.djangoproject.com/en/dev/ref/contrib/gis/install/geolibs/)
 
 Install GEOS
 
