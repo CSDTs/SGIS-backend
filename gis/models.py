@@ -171,11 +171,11 @@ class Dataset(models.Model):
 		return True
 
 class MapElement(models.Model):
-	dataset = models.ForeignKey(Dataset)
+	dataset = models.ForeignKey(Dataset, null=True)
 	remote_id = models.CharField(max_length=50)
 	name = models.CharField(max_length=150)
-	lat = models.DecimalField(max_digits=17, decimal_places=15)
-	lon = models.DecimalField(max_digits=17, decimal_places=15)
+	lat = models.IntegerField()#max_digits=17, decimal_places=15)
+	lon = models.IntegerField()#max_digits=17, decimal_places=15)
 	field1 = models.CharField(blank=True,max_length=200)
 	field2 = models.CharField(blank=True,max_length=200)
 	field3 = models.CharField(blank=True,max_length=200)

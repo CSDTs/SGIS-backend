@@ -61,7 +61,7 @@ class MapPointSerializer(serializers.HyperlinkedModelSerializer):
         model = MapPoint 
         fields = ('dataset','id','name','latitude','longitude','street','city','state','zipcode','county','field1','field2','field3','tags')
 
-class MapPolygonSerializer(serializers.HyperlinkedModelSerializer):
+class MapPolygonSerializer(gis_serializers.GeoModelSerializer):
     latitude = serializers.DecimalField(source = 'lat')
     longitude = serializers.DecimalField(source = 'lon')
     tags = serializers.RelatedField(required = False, many = True, read_only = True)
