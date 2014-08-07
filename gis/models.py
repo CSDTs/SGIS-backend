@@ -1,4 +1,3 @@
-#
 from django.contrib.gis.db import models
 #from django.contrib.gis.db import models #may need to switch to this later
 from datetime import datetime
@@ -97,7 +96,7 @@ class Dataset(models.Model):
 		fields['field2'] = [x.split('+') for x in self.field2_name.split(',')]
 		fields['field3'] = [x.split('+') for x in self.field3_name.split(',')]
 
-
+		
 		try_geocoding = self.needs_geocoding
 		rec_read = len(json_in)
 		i = 0
@@ -171,11 +170,11 @@ class Dataset(models.Model):
 		return True
 
 class MapElement(models.Model):
-	dataset = models.ForeignKey(Dataset, null=True)
+	dataset = models.ForeignKey(Dataset)
 	remote_id = models.CharField(max_length=50)
 	name = models.CharField(max_length=150)
-	lat = models.IntegerField()#max_digits=17, decimal_places=15)
-	lon = models.IntegerField()#max_digits=17, decimal_places=15)
+	lat = models.DecimalField(max_digits=17, decimal_places=15)
+	lon = models.DecimalField(max_digits=17, decimal_places=15)
 	field1 = models.CharField(blank=True,max_length=200)
 	field2 = models.CharField(blank=True,max_length=200)
 	field3 = models.CharField(blank=True,max_length=200)
@@ -225,7 +224,7 @@ class Tag(models.Model):
 	tag = models.CharField(max_length = 100)
 	approved = models.BooleanField(default=False)
 	count = models.IntegerField(default=0)
-
+	
 	def __unicode__(self):
 		return self.tag
 
