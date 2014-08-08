@@ -174,7 +174,7 @@ class MapElement(models.Model):
 	remote_id = models.CharField(max_length=50)
 	name = models.CharField(max_length=150)
 	point = models.PointField(blank=True)
-	
+
 	objects = models.GeoManager()
 
 	def __unicode__(self):
@@ -221,8 +221,8 @@ class MapPoint(MapElement):
 class MapPolygon(MapElement):
 	lat = models.CharField(max_length=17)
 	lon = models.CharField(max_length=17)
-	field1 = models.DoubleField()
-	field2 = models.DoubleField()
+	field1 = models.FloatField()
+	field2 = models.FloatField()
 
 	mpoly = models.MultiPolygonField()
 
