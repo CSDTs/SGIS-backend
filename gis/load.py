@@ -1,4 +1,4 @@
-import os
+import os, decimal
 from django.contrib.gis.utils import LayerMapping
 from models import MapPolygon, Dataset
 from datetime import datetime
@@ -22,20 +22,25 @@ def run(verbose=True):
     tract_mapping = {
         'remote_id' : ds.remote_id_field,
         'name' : ds.name_field,
-        'lat' : ds.lat_field,
-        'lon' : ds.lon_field,
-        'field1' : ds.field1_name,
-        'field2' : ds.field2_name,
+        'field1' : ds.lat_field,
+        'field2' : ds.lon_field,
+        'lat' : ds.field1_name,
+        'lon' : ds.field2_name,
         'mpoly' : 'MULTIPOLYGON',
     }
 
     tract_shp = os.path.abspath(os.path.join(os.path.dirname(__file__), 'data/tl_2010_36_tract10.shp'))
 
-    lm = LayerMapping(MapPolygon, tract_shp, tract_mapping,
-                      transform=False, encoding='iso-8859-1')
+    lm = LayerMapping(MapPolygon, tract_shp, tract_mapping, transform=False, encoding='iso-8859-1')
 
     lm.save(strict=True, verbose=verbose)
     for mp in MapPolygon.objects.filter(dataset_id = None):
         mp.dataset = ds
+        lat = decimal.Decimal(mp.field1)
+        lon = decimal.Decimal(mp.field2)
+        mp.field1 = str(mp.lat)
+        mp.field2 = str(mp.lon)
+        mp.lat= lat
+        mp.lon = lon
         mp.save()
 

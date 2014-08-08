@@ -2,11 +2,6 @@ from gis.models import Dataset, MapPoint, Tag, TagIndiv, MapPolygon
 from rest_framework import serializers
 from rest_framework_gis import serializers as gis_serializers
 
-class NestedTagSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Tag 
-        fields = ['tag']
-
 class TagSerializer(serializers.ModelSerializer):
     class Meta:
         model = TagIndiv
@@ -61,13 +56,24 @@ class MapPointSerializer(serializers.HyperlinkedModelSerializer):
         model = MapPoint 
         fields = ('dataset','id','name','latitude','longitude','street','city','state','zipcode','county','field1','field2','field3','tags')
 
-class MapPolygonSerializer(gis_serializers.GeoModelSerializer):
+class MapPolygonSerializer(gis_serializers.GeoFeatureModelSerializer):
     latitude = serializers.DecimalField(source = 'lat')
     longitude = serializers.DecimalField(source = 'lon')
-    tags = serializers.RelatedField(required = False, many = True, read_only = True)
+    
+    tags = serializers.SerializerMethodField('get_tags')
+   # geometry = serializers.SerializerMethodField('get_mpoly')
+
+    def get_tags(self, mappolygon):
+        #build nested distinct list
+        return Tag.objects.filter(approved=True, tagindiv__mappolygon=mappolygon).distinct('id','tag').values('id','tag')
+
+    def get_mpoly(self, mappolygon):
+        return mappolygon.mpoly
 
     class Meta:
+        id_field = False
+        geo_field = 'mpoly'
         model = MapPolygon 
-        fields = ('dataset','remote_id','name','latitude','longitude','field1','field2','mpoly','tags')
+        fields = ('id','dataset','remote_id','name','latitude','longitude','field1','field2','tags')
 
 #class MapElementSerializer(gis_serializers.GeoModelSerializer):

@@ -173,12 +173,8 @@ class MapElement(models.Model):
 	dataset = models.ForeignKey(Dataset)
 	remote_id = models.CharField(max_length=50)
 	name = models.CharField(max_length=150)
-	lat = models.DecimalField(max_digits=17, decimal_places=15)
-	lon = models.DecimalField(max_digits=17, decimal_places=15)
-	field1 = models.CharField(blank=True,max_length=200)
-	field2 = models.CharField(blank=True,max_length=200)
-	field3 = models.CharField(blank=True,max_length=200)
-
+	point = models.PointField(blank=True)
+	
 	objects = models.GeoManager()
 
 	def __unicode__(self):
@@ -189,6 +185,12 @@ class MapElement(models.Model):
 
 
 class MapPoint(MapElement):
+	lat = models.DecimalField(max_digits=17, decimal_places=15)
+	lon = models.DecimalField(max_digits=17, decimal_places=15)
+	field1 = models.CharField(blank=True,max_length=200)
+	field2 = models.CharField(blank=True,max_length=200)
+	field3 = models.CharField(blank=True,max_length=200)
+
 	street = models.CharField(max_length=200)
 	city = models.CharField(max_length=100)
 	state = models.CharField(max_length=2)
@@ -217,6 +219,11 @@ class MapPoint(MapElement):
 		return {'status': j['status'], 'request': request}
 
 class MapPolygon(MapElement):
+	lat = models.CharField(max_length=17)
+	lon = models.CharField(max_length=17)
+	field1 = models.DoubleField()
+	field2 = models.DoubleField()
+
 	mpoly = models.MultiPolygonField()
 
 class Tag(models.Model):
