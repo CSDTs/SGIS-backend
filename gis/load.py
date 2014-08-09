@@ -22,10 +22,10 @@ def run(verbose=True):
     tract_mapping = {
         'remote_id' : ds.remote_id_field,
         'name' : ds.name_field,
-        'field1' : ds.lat_field,
-        'field2' : ds.lon_field,
-        'lat' : ds.field1_name,
-        'lon' : ds.field2_name,
+        'lat' : ds.lat_field,
+        'lon' : ds.lon_field,
+        'field1' : ds.field1_name,
+        'field2' : ds.field2_name,
         'mpoly' : 'MULTIPOLYGON',
     }
 

@@ -170,10 +170,10 @@ class Dataset(models.Model):
 		return True
 
 class MapElement(models.Model):
-	dataset = models.ForeignKey(Dataset)
+	dataset = models.ForeignKey(Dataset, blank=True, null=True)
 	remote_id = models.CharField(max_length=50)
 	name = models.CharField(max_length=150)
-	point = models.PointField(blank=True)
+	point = models.PointField(blank=True,null=True)
 
 	objects = models.GeoManager()
 
