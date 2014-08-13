@@ -39,7 +39,7 @@ class MapPointViewSet(viewsets.ReadOnlyModelViewSet):
     model = MapPoint
 
     def get_queryset(self):
-    	queryset = MapPoint.objects.all()
+    	queryset = MapPoint.objects
     	for param, result in self.request.QUERY_PARAMS.items():
     		p = param.lower()
     		if p == 'dataset':
@@ -75,7 +75,7 @@ class MapPointViewSet(viewsets.ReadOnlyModelViewSet):
 	    		queryset = queryset.filter(county__iexact = result)
 	    	elif p in ['zipcode','zip','zip_code']:
 	    		queryset = queryset.filter(zipcode__iexact = result)
-        return queryset
+        return queryset.all()
 
 class MapPolygonViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = MapPolygonSerializer
