@@ -27,9 +27,21 @@ class NewTagSerializer(serializers.ModelSerializer):
                 mp = MapPoint.objects.get(id=attrs['mappoint']) 
             except:
                 return None
-            new_tag = Tag(dataset = mp.dataset, tag = attrs['tag'])
-            new_tag.save()
-            instance = TagIndiv(mappoint = mp, tag = new_tag)  
+            attrs['tag'] = attrs['tag'].strip()
+            tags = Tag.objects.filter(dataset = mp.dataset, tag = attrs['tag'])
+            len_tags = len(tags)
+            if len_tags == 0:
+                tag = Tag(dataset = mp.dataset, tag = attrs['tag'])
+                tag.save()
+            elif len_tags == 1:
+                tag = tags[0]
+            else:
+                approved_tags = tags.filter(approved = True)
+                if len(approved_tags) > 0:
+                    tag = approved_tags[0]
+                else:
+                    tag = tags[0]
+            instance = TagIndiv(mappoint = mp, tag = tag)  
         return instance
 
 class TagCountSerializer(serializers.HyperlinkedModelSerializer):
