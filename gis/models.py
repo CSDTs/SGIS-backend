@@ -174,8 +174,9 @@ class MapElement(models.Model):
 	remote_id = models.CharField(max_length=50)
 	name = models.CharField(max_length=150)
 	point = models.PointField(blank=True,null=True)
-
+	
 	objects = models.GeoManager()
+
 
 	def __unicode__(self):
 		return self.name
@@ -241,7 +242,7 @@ class Tag(models.Model):
 			self.save()
 
 	def recount(self, save=True):
-		self.count = TagIndiv.objects.filter(Q(tag=self), Q(mappoint__dataset_id=self.dataset_id) | Q(mappoint__dataset_id=self.dataset_id)).count()
+		self.count = TagIndiv.objects.filter(Q(tag=self), Q(mappoint__dataset_id=self.dataset_id) | Q(mappolygon__dataset_id=self.dataset_id)).count()
 		if save:
 			self.save()
 

@@ -3,11 +3,18 @@ from rest_framework import serializers
 from rest_framework_gis import serializers as gis_serializers
 
 class TagSerializer(serializers.ModelSerializer):
+    def __init__(self, *args, **kwargs):
+        many = kwargs.pop('many', True)
+        super(TagSerializer, self).__init__(many=many, *args, **kwargs)
+
     class Meta:
         model = TagIndiv
         fields = ('mappoint','tag')
 
 class NewTagSerializer(serializers.ModelSerializer):
+    mappoint = serializers.IntegerField()
+    tag = serializers.CharField()
+
     class Meta:
         model = TagIndiv
         fields = ('mappoint','tag')
@@ -16,16 +23,13 @@ class NewTagSerializer(serializers.ModelSerializer):
         #only react to a post
         if not instance:
             #find the mappoint
-            mp = MapPoint.objects.get(id=attrs['mappoint']) 
-            if len(mp) == 0:
+            try:
+                mp = MapPoint.objects.get(id=attrs['mappoint']) 
+            except:
                 return None
-            mp = mp[0]
-            #create a new tag
             new_tag = Tag(dataset = mp.dataset, tag = attrs['tag'])
             new_tag.save()
-            attrs['tag'] = new_tag.id
-            instance = super().restore_object(attrs, instance)
-
+            instance = TagIndiv(mappoint = mp, tag = new_tag)  
         return instance
 
 class TagCountSerializer(serializers.HyperlinkedModelSerializer):

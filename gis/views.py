@@ -1,7 +1,9 @@
 from django.db.models import Count
+from django.contrib.gis.db.models import Count
 from django.shortcuts import render
 #from django.contrib.auth.models import User, Group
 from rest_framework import viewsets, permissions
+from django.contrib.gis.geos import Polygon
 
 from gis.models import Dataset, MapPoint, Tag, MapPolygon, TagIndiv
 from gis.serializers import TagCountSerializer, DatasetSerializer, MapPointSerializer, NewTagSerializer, TagSerializer, NewTagSerializer, MapPolygonSerializer
@@ -80,7 +82,8 @@ class MapPolygonViewSet(viewsets.ReadOnlyModelViewSet):
     model = MapPolygon
 
     def get_queryset(self):
-        queryset = MapPolygon.objects.all()
+        queryset = MapPolygon.objects
+        bb = {}
         for param, result in self.request.QUERY_PARAMS.items():
             p = param.lower()
             if p == 'dataset':
@@ -89,28 +92,17 @@ class MapPolygonViewSet(viewsets.ReadOnlyModelViewSet):
                     queryset = queryset.filter(dataset__id__exact = r)
                 except:
                     queryset = queryset.filter(dataset__name__icontains = result)
-            elif p in ['max_lat','min_lat','lat','max_lon','min_lon','lon']:
+            elif p in ['max_lat','min_lat','max_lon','min_lon']:
                 try:
-                    r = Decimal(result)
+                    r = float(result)
+                    bb[p] = r
                 except:
                     continue
-                if p == 'max_lat' or p == 'lat':
-                    queryset = queryset.filter(lat__lte = maxr)
-                if p == 'min_lat' or p == 'lat':
-                    queryset = queryset.filter(lat__gte = minr)
-                    continue
-                if p == 'max_lon' or p == 'lon':
-                    queryset = queryset.filter(lon__lte = maxr)
-                if p == 'min_lon' or p == 'lon':
-                    queryset = queryset.filter(lon__gte = minr)
-            '''elif p == 'street':
-                queryset = queryset.filter(street__iexact = result)
-            elif p == 'city':
-                queryset = queryset.filter(street__iexact = result)
-            elif p == 'state':
-                queryset = queryset.filter(state__iexact = result)
-            elif p == 'county':
-                queryset = queryset.filter(county__iexact = result)
-            elif p in ['zipcode','zip','zip_code']:
-                queryset = queryset.filter(zipcode__iexact = result)'''
-        return queryset
+        #define bounding box
+        if 'max_lat' in bb and 'min_lat' in bb and 'max_lon' in bb and 'min_lon' in bb:
+            geom = Polygon.from_bbox((bb['min_lon'],bb['min_lat'],bb['max_lon'],bb['max_lat']))
+            #print geom
+            queryset = queryset.filter(mpoly__bboverlaps=geom)
+            #print queryset.query
+        return queryset.all()
+

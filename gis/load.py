@@ -16,7 +16,6 @@ def run(verbose=True):
         field1_name = 'ALAND10',
         field2_en = 'Water Area',
         field2_name = 'AWATER10')
-    ds.save()
 
 
     tract_mapping = {
@@ -34,13 +33,17 @@ def run(verbose=True):
     lm = LayerMapping(MapPolygon, tract_shp, tract_mapping, transform=False, encoding='iso-8859-1')
 
     lm.save(strict=True, verbose=verbose)
-    for mp in MapPolygon.objects.filter(dataset_id = None):
-        mp.dataset = ds
-        lat = decimal.Decimal(mp.field1)
-        lon = decimal.Decimal(mp.field2)
-        mp.field1 = str(mp.lat)
-        mp.field2 = str(mp.lon)
-        mp.lat= lat
-        mp.lon = lon
-        mp.save()
 
+    ds.save()
+
+    MapPolygon.objects.filter(dataset = None).update(dataset = ds)
+    
+
+
+def recount():
+    all_tags = Tag.objects.all()
+    for tag in all_tags:
+        tag.recount(save=True)
+
+def create_points():
+    mps = MapPoint.objects.all()

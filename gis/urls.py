@@ -8,9 +8,9 @@ admin.autodiscover()
 router = routers.DefaultRouter()
 router.register(r'api-ds', views.DatasetViewSet)
 router.register(r'api-mp', views.MapPointViewSet, base_name = 'mappoint')
-#router.register(r'apinewtag', views.NewTagViewSet)
+router.register(r'api-newtag', views.NewTagViewSet)
 router.register(r'api-poly', views.MapPolygonViewSet, base_name = 'mappolygon')
-router.register(r'apitag', views.TagViewSet)
+router.register(r'api-tag', views.TagViewSet)
 #router.register(r'api-tag/count', views.TagCountViewSet, base_name = 'tag')
 
 urlpatterns = patterns('',
