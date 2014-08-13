@@ -27,7 +27,7 @@ class NewTagSerializer(serializers.ModelSerializer):
                 mp = MapPoint.objects.get(id=attrs['mappoint']) 
             except:
                 return None
-            attrs['tag'] = attrs['tag'].strip()
+            attrs['tag'] = attrs['tag'].strip().lower()
             tags = Tag.objects.filter(dataset = mp.dataset, tag = attrs['tag'])
             len_tags = len(tags)
             if len_tags == 0:
