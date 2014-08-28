@@ -1,6 +1,6 @@
 from django.dispatch import receiver
 from django.db.models.signals import post_save, pre_save
-from gis.models import Dataset, MapPoint, Tag, TagIndiv
+from gis.models import Dataset, Tag, TagIndiv
 
 #@receiver(post_save, sender=Dataset)
 def update_mappoints(sender, **kwargs):

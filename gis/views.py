@@ -39,7 +39,24 @@ class MapPointViewSet(viewsets.ReadOnlyModelViewSet):
     model = MapPoint
 
     def get_queryset(self):
-    	queryset = MapPoint.objects
+        tags = [result for (param, result) in self.request.QUERY_PARAMS.items() if param in ['tag','tags']]
+        queryset = MapPoint.objects.none()
+        if len(tags) > 0:
+            for t in tags:
+                t = t.split(',')
+                if type(t) is not list:
+                    t = [t]
+                print t
+                for tag in t:
+                    try:
+                        num = int(tag)
+                        queryset = queryset | MapPoint.objects.filter(tagindiv__tag=num)
+                    except:
+                        queryset = queryset | MapPoint.objects.filter(tagindiv__tag__tag=tag)
+            queryset = queryset.filter(tagindiv__tag__approved=True)
+        else:
+            queryset = MapPoint.objects
+        #print queryset.query
     	for param, result in self.request.QUERY_PARAMS.items():
     		p = param.lower()
     		if p == 'dataset':
@@ -47,7 +64,7 @@ class MapPointViewSet(viewsets.ReadOnlyModelViewSet):
     				r = int(result)
     				queryset = queryset.filter(dataset__id__exact = r)
     			except:
-    				queryset = queryset.filter(dataset__name__icontains = result)
+    				queryset = queryset.filter(dataset__name__icontains = result.strip())
     		elif p in ['max_lat','min_lat','lat','max_lon','min_lon','lon']:
     			try:
     				r = Decimal(result)
@@ -75,6 +92,8 @@ class MapPointViewSet(viewsets.ReadOnlyModelViewSet):
 	    		queryset = queryset.filter(county__iexact = result)
 	    	elif p in ['zipcode','zip','zip_code']:
 	    		queryset = queryset.filter(zipcode__iexact = result)
+            
+
         return queryset.all()
 
 class MapPolygonViewSet(viewsets.ReadOnlyModelViewSet):
@@ -82,7 +101,24 @@ class MapPolygonViewSet(viewsets.ReadOnlyModelViewSet):
     model = MapPolygon
 
     def get_queryset(self):
-        queryset = MapPolygon.objects
+               tags = [result for (param, result) in self.request.QUERY_PARAMS.items() if param in ['tag','tags']]
+        queryset = MapPoint.objects.none()
+        if len(tags) > 0:
+            for t in tags:
+                t = t.split(',')
+                if type(t) is not list:
+                    t = [t]
+                print t
+                for tag in t:
+                    try:
+                        num = int(tag)
+                        queryset = queryset | MapPoint.objects.filter(tagindiv__tag=num)
+                    except:
+                        queryset = queryset | MapPoint.objects.filter(tagindiv__tag__tag=tag)
+            queryset = queryset.filter(tagindiv__tag__approved=True)
+        else:
+            queryset = MapPolygon.objects
+        
         bb = {}
         for param, result in self.request.QUERY_PARAMS.items():
             p = param.lower()

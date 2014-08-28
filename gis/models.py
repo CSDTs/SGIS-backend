@@ -192,12 +192,12 @@ class MapPoint(MapElement):
 	field2 = models.CharField(blank=True,max_length=200)
 	field3 = models.CharField(blank=True,max_length=200)
 
-	street = models.CharField(max_length=200)
-	city = models.CharField(max_length=100)
-	state = models.CharField(max_length=2)
-	zipcode = models.CharField(max_length=5)
-	county = models.CharField(max_length=75)
-	geocoded = models.BooleanField(default = False)
+	street = models.CharField(blank=True,max_length=200)
+	city = models.CharField(blank=True,max_length=100)
+	state = models.CharField(blank=True,max_length=2)
+	zipcode = models.CharField(blank=True,max_length=5)
+	county = models.CharField(blank=True,max_length=75)
+	geocoded = models.BooleanField(blank=True,default = False)
 
 	def geocode(self, unknown_count = 0):
 		key = settings.GOOGLE_API_KEY
@@ -247,9 +247,13 @@ class Tag(models.Model):
 			self.save()
 
 class TagIndiv(models.Model):
-	tag = models.ForeignKey(Tag)
+	tag = models.ForeignKey(Tag, related_name='tagindivs')
 	mappoint = models.ForeignKey(MapPoint, null = True, blank = True)
 	mappolygon = models.ForeignKey(MapPolygon, null = True, blank = True)
 
 	def __unicode__(self):
-		return self.mappoint.name + ' tagged as "' + self.tag.tag + '"'
+		if self.mappoint != '':
+	 		return self.mappoint.name + ' tagged as "' + self.tag.tag + '"'
+	 	elif self.mappolygon != '':
+	 		return self.mappoint.name + ' tagged as "' + self.tag.tag + '"'
+ 		return '<NULL> tagged as "' + self.tag.tag + '"'
