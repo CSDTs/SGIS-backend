@@ -102,7 +102,7 @@ class MapPolygonViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         tags = [result for (param, result) in self.request.QUERY_PARAMS.items() if param in ['tag','tags']]
-        queryset = MapPoint.objects.none()
+        queryset = MapPolygon.objects.none()
         if len(tags) > 0:
             for t in tags:
                 t = t.split(',')
@@ -112,9 +112,9 @@ class MapPolygonViewSet(viewsets.ReadOnlyModelViewSet):
                 for tag in t:
                     try:
                         num = int(tag)
-                        queryset = queryset | MapPoint.objects.filter(tagindiv__tag=num)
+                        queryset = queryset | MapPolygon.objects.filter(tagindiv__tag=num)
                     except:
-                        queryset = queryset | MapPoint.objects.filter(tagindiv__tag__tag=tag)
+                        queryset = queryset | MapPolygon.objects.filter(tagindiv__tag__tag=tag)
             queryset = queryset.filter(tagindiv__tag__approved=True)
         else:
             queryset = MapPolygon.objects

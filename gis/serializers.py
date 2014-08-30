@@ -81,7 +81,7 @@ class MapPolygonSerializer(gis_serializers.GeoFeatureModelSerializer):
 
     def get_tags(self, mappolygon):
         #build nested distinct list
-        return Tag.objects.filter(approved=True, tagindiv__mappolygon=mappolygon).distinct('id','tag').values('id','tag')
+        return Tag.objects.filter(approved=True, tagindivs__mappolygon=mappolygon).distinct('id','tag').values('id','tag')
 
     def get_mpoly(self, mappolygon):
         return mappolygon.mpoly
