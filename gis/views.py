@@ -94,7 +94,7 @@ class MapPointViewSet(viewsets.ReadOnlyModelViewSet):
 	    		queryset = queryset.filter(zipcode__iexact = result)
             
 
-        return queryset.all()
+        return queryset.distinct().all()
 
 class MapPolygonViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = MapPolygonSerializer
@@ -140,5 +140,5 @@ class MapPolygonViewSet(viewsets.ReadOnlyModelViewSet):
             #print geom
             queryset = queryset.filter(mpoly__bboverlaps=geom)
             #print queryset.query
-        return queryset.all()
+        return queryset.distinct().all()
 
