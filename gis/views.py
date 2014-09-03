@@ -39,14 +39,28 @@ class MapPointViewSet(viewsets.ReadOnlyModelViewSet):
     model = MapPoint
 
     def get_queryset(self):
-        tags = [result for (param, result) in self.request.QUERY_PARAMS.items() if param in ['tag','tags']]
+        t = False
+        matchall = False
         queryset = MapPoint.objects.none()
-        if len(tags) > 0:
-            for t in tags:
-                t = t.split(',')
-                if type(t) is not list:
-                    t = [t]
-                print t
+
+        for (param, result) in self.request.QUERY_PARAMS.items():
+            if param in ['tag','tags']:
+                t = result
+            elif param == 'match' and result == 'all':
+                matchall = True
+        if t:
+            t = t.split(',')
+            if type(t) is not list:
+                t = [t]
+            if matchall:
+                queryset = MapPoint.objects
+                for tag in t:
+                    try:
+                        num = int(tag)
+                        queryset = queryset.filter(tagindiv__tag=num)
+                    except:
+                        queryset = queryset.filter(tagindiv__tag__tag=tag)
+            else:
                 for tag in t:
                     try:
                         num = int(tag)
@@ -56,7 +70,6 @@ class MapPointViewSet(viewsets.ReadOnlyModelViewSet):
             queryset = queryset.filter(tagindiv__tag__approved=True)
         else:
             queryset = MapPoint.objects
-        #print queryset.query
     	for param, result in self.request.QUERY_PARAMS.items():
     		p = param.lower()
     		if p == 'dataset':
@@ -92,8 +105,6 @@ class MapPointViewSet(viewsets.ReadOnlyModelViewSet):
 	    		queryset = queryset.filter(county__iexact = result)
 	    	elif p in ['zipcode','zip','zip_code']:
 	    		queryset = queryset.filter(zipcode__iexact = result)
-            
-
         return queryset.distinct().all()
 
 class MapPolygonViewSet(viewsets.ReadOnlyModelViewSet):
@@ -101,14 +112,28 @@ class MapPolygonViewSet(viewsets.ReadOnlyModelViewSet):
     model = MapPolygon
 
     def get_queryset(self):
-        tags = [result for (param, result) in self.request.QUERY_PARAMS.items() if param in ['tag','tags']]
+        t = False
+        matchall = False
         queryset = MapPolygon.objects.none()
-        if len(tags) > 0:
-            for t in tags:
-                t = t.split(',')
-                if type(t) is not list:
-                    t = [t]
-                print t
+
+        for (param, result) in self.request.QUERY_PARAMS.items():
+            if param in ['tag','tags']:
+                t = result
+            elif param == 'match' and result == 'all':
+                matchall = True
+        if t:
+            t = t.split(',')
+            if type(t) is not list:
+                t = [t]
+            if matchall:
+                queryset = MapPolygon.objects
+                for tag in t:
+                    try:
+                        num = int(tag)
+                        queryset = queryset.filter(tagindiv__tag=num)
+                    except:
+                        queryset = queryset.filter(tagindiv__tag__tag=tag)
+            else:
                 for tag in t:
                     try:
                         num = int(tag)
