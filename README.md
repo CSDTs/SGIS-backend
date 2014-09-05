@@ -28,9 +28,10 @@ Everything else:
 Install all postgres things needed:
 
 ```
-$ sudo apt-get install postgresql-9.3 postgresql-9.3-postgis-2.1 pgadmin3 postgresql-contrib```
+$ sudo apt-get install postgresql-9.3 postgresql-9.3-postgis-2.1 pgadmin3 postgresql-contrib
 $ sudo su - postgres
 $ createdb django_test
+$ exit
 ```
 
 
@@ -78,13 +79,17 @@ $ psql django_test
 > \q
 ```
 
+```
+$ exit
+```
+
 #### Scheduled jobs (optional)
 
 (use sudo to add to root, without to add to user's crontab):
 
 ```(sudo) crontab -e```
 
-then add the following line:
+then select an editor and add the following line:
 
 ```0 3 * * * /(path)/manage.py runjobs daily```
 
