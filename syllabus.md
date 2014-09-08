@@ -17,6 +17,7 @@ The product is an app for a *Django* website (written in *Python*) using a *Post
   * Complete documentation of semester’s work
 * Integration with community site
 * Code and documentation available at: github.com/kathleentully/gis_csdt
+
 ##Accomplishment Timetable
 Date | Accomplishment
 ----:|:--------------
