@@ -19,7 +19,7 @@ def read_requirements(fname):
 
 setup(
     zip_safe = False,
-    name = "gis",
+    name = "gis_csdt",
     version = "1.0.0",
     author = "Kathleen Tully",
     author_email = "kathleen.tully@gmail.com",
