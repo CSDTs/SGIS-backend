@@ -3,8 +3,8 @@ import os
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
 
-DEBUG = False
-TEMPLATE_DEBUG = True
+DEBUG = True
+TEMPLATE_DEBUG = DEBUG
 
 ADMINS = (
     # ('Your Name', 'your_email@example.com'),
@@ -125,6 +125,7 @@ INSTALLED_APPS = (
     'django.contrib.admindocs',
     'rest_framework',
     'django_extensions',
+    'django.contrib.admin', 
     'django.contrib.gis',
     'gis_csdt',
 )
@@ -171,14 +172,16 @@ REST_FRAMEWORK = {
     ],
     'PAGINATE_BY': 10,
     'PAGINATE_BY_PARAM':'page_size',
+<<<<<<< HEAD:gis_csdt/settings.py
     'MAX_PAGINATE_BY': 100,
     'EXCEPTION_HANDLER': 'gis_csdt.gis_csdt.exceptions.custom_exception_handler'
+=======
+    'MAX_PAGINATE_BY': 100
+>>>>>>> parent of ffbd549... fixed admin:gis/settings.py
 
 }
 
 GOOGLE_API_KEY = 'AIzaSyDazxNgLILi-BIkhWUqgodvdQgdcWu29_g'
-
-ALLOWED_HOSTS = ('127.0.0.1',)
 
 try:
     from local_settings import *
