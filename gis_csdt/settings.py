@@ -172,16 +172,8 @@ REST_FRAMEWORK = {
     ],
     'PAGINATE_BY': 10,
     'PAGINATE_BY_PARAM':'page_size',
-<<<<<<< HEAD:gis_csdt/settings.py
-<<<<<<< HEAD:gis_csdt/settings.py
     'MAX_PAGINATE_BY': 100,
     'EXCEPTION_HANDLER': 'gis_csdt.gis_csdt.exceptions.custom_exception_handler'
-=======
-    'MAX_PAGINATE_BY': 100
->>>>>>> parent of ffbd549... fixed admin:gis/settings.py
-=======
-    'MAX_PAGINATE_BY': 100
->>>>>>> parent of ffbd549... fixed admin:gis/settings.py
 
 }
 
