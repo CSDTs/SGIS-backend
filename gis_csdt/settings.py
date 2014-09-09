@@ -125,7 +125,6 @@ INSTALLED_APPS = (
     'django.contrib.admindocs',
     'rest_framework',
     'django_extensions',
-    'django.contrib.admin', 
     'django.contrib.gis',
     'gis_csdt',
 )
@@ -174,7 +173,6 @@ REST_FRAMEWORK = {
     'PAGINATE_BY_PARAM':'page_size',
     'MAX_PAGINATE_BY': 100,
     'EXCEPTION_HANDLER': 'gis_csdt.gis_csdt.exceptions.custom_exception_handler'
-
 }
 
 GOOGLE_API_KEY = 'AIzaSyDazxNgLILi-BIkhWUqgodvdQgdcWu29_g'
