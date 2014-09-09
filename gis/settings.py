@@ -3,8 +3,8 @@ import os
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
 
-DEBUG = True
-TEMPLATE_DEBUG = DEBUG
+DEBUG = False
+TEMPLATE_DEBUG = True
 
 ADMINS = (
     # ('Your Name', 'your_email@example.com'),
@@ -125,7 +125,6 @@ INSTALLED_APPS = (
     'django.contrib.admindocs',
     'rest_framework',
     'django_extensions',
-    'django.contrib.admin', 
     'django.contrib.gis',
     'gis',
 )
@@ -172,11 +171,14 @@ REST_FRAMEWORK = {
     ],
     'PAGINATE_BY': 10,
     'PAGINATE_BY_PARAM':'page_size',
-    'MAX_PAGINATE_BY': 100
+    'MAX_PAGINATE_BY': 100,
+    'EXCEPTION_HANDLER': 'gis_csdt.gis.exceptions.custom_exception_handler'
 
 }
 
 GOOGLE_API_KEY = 'AIzaSyDazxNgLILi-BIkhWUqgodvdQgdcWu29_g'
+
+ALLOWED_HOSTS = ('127.0.0.1',)
 
 try:
     from local_settings import *
