@@ -26,4 +26,3 @@ Oct&nbsp;6 | Go live! - initial installation into community site,<br />resolving
 Oct&nbsp;27 | Add support for authentication,<br />Implement user specific data (points and tags)
 Nov&nbsp;17 | Create admin approval interface for tags,<br />Plan to integrate with classroom scenario
 Dec&nbsp;5 | Implement classroom groups using community site setup,<br />Finalize documentation from throughout semester
-
