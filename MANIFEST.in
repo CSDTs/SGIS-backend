@@ -1,0 +1,3 @@
+recursive-include gis_csdt/static *.*
+recursive-include gis_csdt/templates *.*
+include README.md libraries.txt
