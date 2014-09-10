@@ -1,10 +1,15 @@
 Installation
 ============
-(on Ubuntu)
-First you need pip and virtualenv:
+(on Ubuntu 14.04 - some packages are named differrently in other versions)
+First you need a few essentials:
+```
+$ sudo apt-get install python-dev build-essential
+```
+
+Now you need pip and virtualenv:
 
 ```
-$ sudo apt-get install python-pip python-dev build-essential
+$ sudo apt-get install python-pip
 $ sudo pip install virtualenv
 ```
 #### Install pip libraries (including django)
@@ -26,6 +31,10 @@ Install all postgres things needed:
 ```
 $ sudo apt-get install postgresql-9.3 postgresql-9.3-postgis-2.1 pgadmin3 postgresql-contrib
 $ sudo su - postgres
+```
+
+Create your database:
+```
 $ createdb django_test
 $ exit
 ```
