@@ -227,6 +227,34 @@ class MapPolygon(MapElement):
 
 	mpoly = models.MultiPolygonField()
 
+class DataField(models.Model):
+	dataset = models.ForeignKey(Dataset, related_name = 'dataFields')
+	field_en = models.CharField(blank=True,max_length=100)
+	field_longname = models.CharField(blank=True, max_length=400)
+	field_name = models.CharField(blank=True,max_length=50)
+
+	INTEGER = 'I'
+	FLOAT = 'F'
+	STRING = 'C'
+	type_choices = ((INTEGER,'integer'), (FLOAT,'floating point'), (STRING, 'string'))
+	field_type = models.CharField(max_length=1, choices=type_choices, default=STRING)
+
+	def __unicode__(self):
+		return self.field_en + ', id:' + str(self.id) + ', dataset:' + str(self.dataset_id)
+
+class DataElement(models.Model):
+	datafield = models.ForeignKey(DataField, related_name = 'dataElements')
+	mappoint = models.ForeignKey(MapPoint, null = True, blank = True)
+	mappolygon = models.ForeignKey(MapPolygon, null = True, blank = True)
+	int_data = models.IntegerField(blank=True, null=True)
+	float_data = models.FloatField(blank=True, null=True)
+	char_data = models.CharField(blank=True, null=True, max_length=200)
+
+	def __unicode__(self):
+		if self.mappolygon is None:
+			return '[' + self.datafield.field_en + '] for [' + self.mappoint.name + '], id:' + str(self.id) + ', datafield:' + str(self.datafield_id)
+		return '[' + self.datafield.field_en + '] for [' + self.mappolygon.name + '], id:' + str(self.id) + ', datafield:' + str(self.datafield_id)
+
 class Tag(models.Model):
 	dataset = models.ForeignKey(Dataset, related_name = 'tags')
 	tag = models.CharField(max_length = 100)
@@ -257,3 +285,16 @@ class TagIndiv(models.Model):
 	 	elif self.mappolygon != '':
 	 		return self.mappoint.name + ' tagged as "' + self.tag.tag + '"'
  		return '<NULL> tagged as "' + self.tag.tag + '"'
+ 		
+ 	class Meta:
+ 		unique_together = (("tag", "mappoint"), ("tag", "mappolygon"))
+
+''' 	def save(self, *args, **kwargs):
+ 		exists = self.id is not null
+ 		if not exists:
+ 			matches = TagIndiv.objects.filter(tag = self.tag, mappoint = self.mappoint, mappolygon = self.mappolygon)
+        if exists or len(matches) == 0:
+            super(TagIndiv, self).save(*args, **kwargs)
+        elif self.approved and matches.filter(approved=True).count() == 0:
+        	matches[0].approved = True
+        	matches[0].save()'''

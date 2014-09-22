@@ -114,3 +114,9 @@ class MapPolygonSerializer(gis_serializers.GeoFeatureModelSerializer):
         fields = ('id','dataset','remote_id','name','latitude','longitude','field1','field2','tags')
 
 #class MapElementSerializer(gis_serializers.GeoModelSerializer):
+class CountPointsInPolygonSerializer():
+    polygon_id = serializers.IntegerField()
+    count = serializers.IntegerField()
+
+    class Meta:
+        fields = ('polygon_id','count')

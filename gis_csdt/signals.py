@@ -18,3 +18,4 @@ def update_tag_count(sender, **kwargs):
 def clean_tags(sender, **kwargs):
 	#all tags must be lowercase without leading or trailing whitespace
 	kwargs.get('instance').tag = kwargs.get('instance').tag.strip().lower()
+	

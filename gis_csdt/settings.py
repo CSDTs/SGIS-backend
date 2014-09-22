@@ -176,6 +176,7 @@ REST_FRAMEWORK = {
 }
 
 GOOGLE_API_KEY = 'AIzaSyDazxNgLILi-BIkhWUqgodvdQgdcWu29_g'
+CENSUS_API_KEY = '6484813f180d34c35df3e62adf2e57459f60a566'
 
 try:
     from local_settings import *

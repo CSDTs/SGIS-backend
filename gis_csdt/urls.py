@@ -1,7 +1,6 @@
 from django.conf.urls import patterns, include, url
 from rest_framework import routers
 from gis_csdt import views
-
 from django.contrib import admin
 admin.autodiscover()
 
@@ -11,6 +10,7 @@ router.register(r'api-mp', views.MapPointViewSet, base_name = 'mappoint')
 router.register(r'api-newtag', views.NewTagViewSet)
 router.register(r'api-poly', views.MapPolygonViewSet, base_name = 'mappolygon')
 router.register(r'api-tag', views.TagViewSet)
+#router.register(r'api-count', views.CountPointsInPolygonView, base_name = 'count')
 #router.register(r'api-tag/count', views.TagCountViewSet, base_name = 'tag')
 
 urlpatterns = patterns('',
