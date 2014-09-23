@@ -6,7 +6,7 @@ from rest_framework import views, viewsets, permissions, response
 from django.contrib.gis.geos import Polygon, Point
 
 from gis_csdt.models import Dataset, MapPoint, Tag, MapPolygon, TagIndiv, DataField, DataElement
-from gis_csdt.serializers import TagCountSerializer, DatasetSerializer, MapPointSerializer, NewTagSerializer, TagSerializer, NewTagSerializer, MapPolygonSerializer, CountPointsInPolygonSerializer
+from gis_csdt.serializers import TagCountSerializer, DatasetSerializer, MapPointSerializer, NewTagSerializer, TagSerializer, NewTagSerializer, MapPolygonSerializer #, CountPointsInPolygonSerializer
 from django.core.paginator import Paginator
 
 
