@@ -261,9 +261,6 @@ class CountPointsInPolygonView(views.APIView):
         points = points.distinct()
         polygons = polygons.distinct()
         count = []
-
-        queryset = polygons
-        paginator = Paginator(queryset, 5)
         mult_tags = len(tags) > 1
 
         for poly in polygons:
@@ -303,6 +300,7 @@ class CountPointsInPolygonView(views.APIView):
 
                 d[df.field_en] = data
             count.append(d)
+        paginator = Paginator(count,5)
         return response.Response(count)
 
 

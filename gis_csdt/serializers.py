@@ -90,6 +90,8 @@ class MapPointSerializer(serializers.HyperlinkedModelSerializer):
         return Tag.objects.filter(approved=True, tagindiv__mappoint=mappoint).distinct('id','tag').values('id','tag')
 
     class Meta:
+        #id_field = False
+        #geo_field = 'point'
         model = MapPoint 
         fields = ('dataset','id','name','latitude','longitude','street','city','state','zipcode','county','field1','field2','field3','tags')
 
@@ -114,9 +116,9 @@ class MapPolygonSerializer(gis_serializers.GeoFeatureModelSerializer):
         fields = ('id','dataset','remote_id','name','latitude','longitude','field1','field2','tags')
 
 #class MapElementSerializer(gis_serializers.GeoModelSerializer):
-class CountPointsInPolygonSerializer():
+'''class CountPointsInPolygonSerializer():
     polygon_id = serializers.IntegerField()
     count = serializers.IntegerField()
 
     class Meta:
-        fields = ('polygon_id','count')
+        fields = ('polygon_id','count')'''
