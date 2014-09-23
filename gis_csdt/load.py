@@ -1,3 +1,6 @@
+##This file includes functions to load basic information
+##should be used from the shell
+
 import os, decimal, json, urllib
 from django.contrib.gis.utils import LayerMapping
 from models import MapPolygon, MapPoint, Dataset, DataField, DataElement, Tag, TagIndiv
@@ -40,7 +43,15 @@ def run(verbose=True):
 
     MapPolygon.objects.filter(dataset = None).update(dataset = ds)
     
-
+def temp_switch():
+    for poly in MapPolygon.objects.all():
+        lat = poly.field1
+        lon = poly.field2
+        poly.field1 = poly.lat
+        poly.field2 = poly.lon
+        poly.lat = lat
+        poly.lon = lon
+        poly.save()
 
 def recount():
     all_tags = Tag.objects.all()
@@ -160,7 +171,7 @@ def add_point_to_mp():
     mps = MapPoint.objects.filter(point__isnull=True).exclude(lat__isnull=True).exclude(lon__isnull=True)
     for mp in mps:
         try:
-            mp.point = Point(float(mp.lat),float(mp.lon))
+            mp.point = Point(float(mp.lon),float(mp.lat))
             mp.save()
         except:
             pass

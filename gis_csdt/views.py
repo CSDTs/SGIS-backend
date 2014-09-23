@@ -2,11 +2,12 @@
 from django.contrib.gis.db.models import Count
 from django.shortcuts import render
 #from django.contrib.auth.models import User, Group
-from rest_framework import views, viewsets, permissions
+from rest_framework import views, viewsets, permissions, response
 from django.contrib.gis.geos import Polygon, Point
 
-from gis_csdt.models import Dataset, MapPoint, Tag, MapPolygon, TagIndiv
+from gis_csdt.models import Dataset, MapPoint, Tag, MapPolygon, TagIndiv, DataField, DataElement
 from gis_csdt.serializers import TagCountSerializer, DatasetSerializer, MapPointSerializer, NewTagSerializer, TagSerializer, NewTagSerializer, MapPolygonSerializer, CountPointsInPolygonSerializer
+from django.core.paginator import Paginator
 
 
 class TagViewSet(viewsets.ModelViewSet):
@@ -183,23 +184,29 @@ class MapPolygonViewSet(viewsets.ReadOnlyModelViewSet):
 class CountPointsInPolygonView(views.APIView):
     #serializer_class = MapPolygonSerializer
     #model = MapPolygon
+    permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
 
-    def get(self, request, pk, format=None):
-        serializer = CountPointsInPolygonSerializer
+    def get(self, request, format=None):
+        #serializer = CountPointsInPolygonSerializer
         #get polygons
-        t = False
+        all_tags = ''
         matchall = False
         polygons = MapPolygon.objects
+        dataset_ids = []
         
         bb = {}
         for param, result in request.QUERY_PARAMS.items():
             p = param.lower()
             if p == 'dataset':
-                try:
-                    r = int(result)
-                    polygons = polygons.filter(dataset__id__exact = r)
-                except:
-                    polygons = polygons.filter(dataset__name__icontains = result)
+                for res in result.split(','):
+                    try:
+                        r = int(result)
+                        dataset_ids.append(r)
+                    except:
+                        for d in Dataset.objects.filter(name__icontains = result):
+                            dataset_ids.append(d.id)
+                polygons = polygons.filter(dataset__id__in = dataset_ids)
+
             elif p in ['max_lat','min_lat','max_lon','min_lon']:
                 try:
                     r = float(result)
@@ -213,43 +220,147 @@ class CountPointsInPolygonView(views.APIView):
             polygons = polygons.filter(mpoly__bboverlaps=geom)
             #print polygons.query
         
+        if len(dataset_ids) == 0:
+            dataset_ids = [d.id for d in Dataset.objects.all()]
 
         points = MapPoint.objects.none()
 
         for (param, result) in request.QUERY_PARAMS.items():
             if param in ['tag','tags']:
-                t = result
+                all_tags = all_tags + result + ','
             elif param == 'match' and result == 'all':
                 matchall = True
-        if t:
-            t = t.split(',')
-            if type(t) is not list:
-                t = [t]
+        if all_tags == '':
+            for t in Tag.objects.filter(dataset__in = dataset_ids):
+                all_tags = all_tags + t.tag + ','
+            tags = all_tags.strip(' ,').split(',')
+            points = MapPoint.objects
+        else:
+            tags = all_tags.strip(' ,').split(',')
+            if type(tags) is not list:
+                tags = [tags]
             if matchall:
                 points = MapPoint.objects
-                for tag in t:
+                for tag in tags:
                     try:
                         num = int(tag)
                         points = points.filter(tagindiv__tag=num)
                     except:
                         points = points.filter(tagindiv__tag__tag=tag)
             else:
-                for tag in t:
+                for tag in tags:
                     try:
                         num = int(tag)
                         points = points | MapPoint.objects.filter(tagindiv__tag=num)
                     except:
                         points = points | MapPoint.objects.filter(tagindiv__tag__tag=tag)
             points = points.filter(tagindiv__tag__approved=True)
-        else:
-            points = MapPoint.objects
-       
+
+        
+        datafields = DataField.objects.all()
         points = points.distinct()
-        polygons = polygons.distinct().all()
-        count = {}
+        polygons = polygons.distinct()
+        count = []
+
+        queryset = polygons
+        paginator = Paginator(queryset, 5)
+        mult_tags = len(tags) > 1
+
         for poly in polygons:
-            count[poly.id] = points.filter().count()
-        print count
-        return None
-        return points.distinct().all()
-        return polygons.distinct().all()
+            d = {"polygon_id": poly.remote_id, poly.dataset.field1_en : poly.field1, poly.dataset.field2_en : poly.field2}
+
+            #counts in polygons
+            all_tag_filter = points
+            if not matchall:
+                for tag in tags:
+                    try:
+                        num = int(tag)
+                        temp = points.filter(tagindiv__tag=num)
+                        all_tag_filter = points.filter(tagindiv__tag=num)
+                    except:
+                        temp = points.filter(tagindiv__tag__tag=tag)
+                        all_tag_filter = points.filter(tagindiv__tag__tag=tag)
+                    d[tag + " count"] = temp.filter(point__contained = poly.mpoly).count()
+                if not mult_tags:
+                    d[all_tags + " count (match any)"] = points.filter(point__contained = poly.mpoly).count()
+            if not mult_tags:
+                d[all_tags + " count (match all)"] = all_tag_filter.filter(point__contained = poly.mpoly).count()
+
+            #get other data
+            for df in datafields:
+                if df.field_type == DataField.INTEGER:
+                    element = DataElement.objects.filter(datafield = df).filter(mappolygon=poly)
+                    if element:
+                        data = element[0].int_data
+                elif df.field_type == DataField.FLOAT:
+                    element = DataElement.objects.filter(datafield = df).filter(mappolygon=poly)
+                    if element:
+                        data = element[0].float_data
+                else:
+                    element = DataElement.objects.filter(datafield = df).filter(mappolygon=poly)
+                    if element:
+                        data = element[0].char_data
+
+                d[df.field_en] = data
+            count.append(d)
+        return response.Response(count)
+
+
+import csv
+from django.http import HttpResponse, HttpRequest, HttpResponseBadRequest, HttpResponseNotAllowed
+
+def AnalyzeAreaAroundPointView(request):
+    if request.method != 'GET':
+        return HttpResponseNotAllowed(['GET'])
+
+    dataset_list = request.GET.getlist('dataset')
+    if len(dataset_list) != 1:
+        return HttpResponseBadRequest(reason_phrase = 'Exactly one dataset must be specified')
+    id_list = request.GET.getlist('id')
+    distances = request.GET.getlist('distance')
+    unit = request.GET.getlist('unit')
+    years = request.GET.getlist('year')
+    if len(unit) > 1:
+        return HttpResponseBadRequest(reason_phrase = 'No more than one unit may be specified')
+    elif len(unit) == 0:
+        unit = 'mi'
+
+    if len(distances) == 0:
+        distances = [1,3,5]
+        unit = 'km'
+    else:
+        distances.sort()
+
+    ids = []
+    for i in id_list:
+        try:
+            n = int(i)
+            ids.append(n)
+        except:
+            pass
+    points = MapPoint.filter(dataset__id__exact = d)
+    if len(id_list) > 0:
+        points = points.in_bulk(ids).all()
+    else:
+        points.points.all()
+
+    counties = {}
+    for point in points:
+        others = MapPoint.filter(dataset__id__exact = d).exclude(id__exact=point.id)
+        max_dist_between = distances[-1] * 2
+        #others  = others. 
+        #point.point
+
+
+    # Create the HttpResponse object with the appropriate CSV header.
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="somefilename.csv"'
+
+    writer = csv.writer(response)
+    writer.writerow(['First row', 'Foo', 'Bar', 'Baz'])
+    writer.writerow(['Second row', 'A', 'B', 'C', '"Testing"', "Here's a quote"])
+
+    return response
+##doesn't belong in views
+def findCensusTracts():
+    pass
