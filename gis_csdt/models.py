@@ -280,9 +280,9 @@ class TagIndiv(models.Model):
 	mappolygon = models.ForeignKey(MapPolygon, null = True, blank = True)
 
 	def __unicode__(self):
-		if self.mappoint != '':
+		if self.mappoint != '' and self.mappoint is not None:
 	 		return self.mappoint.name + ' tagged as "' + self.tag.tag + '"'
-	 	elif self.mappolygon != '':
+	 	elif self.mappolygon != '' and self.mappolygon is not None:
 	 		return self.mappoint.name + ' tagged as "' + self.tag.tag + '"'
  		return '<NULL> tagged as "' + self.tag.tag + '"'
  		
