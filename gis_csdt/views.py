@@ -278,9 +278,9 @@ class CountPointsInPolygonView(views.APIView):
                         temp = points.filter(tagindiv__tag__tag=tag)
                         all_tag_filter = points.filter(tagindiv__tag__tag=tag)
                     d[tag + " count"] = temp.filter(point__contained = poly.mpoly).count()
-                if not mult_tags:
+                if mult_tags:
                     d[all_tags + " count (match any)"] = points.filter(point__contained = poly.mpoly).count()
-            if not mult_tags:
+            if mult_tags:
                 d[all_tags + " count (match all)"] = all_tag_filter.filter(point__contained = poly.mpoly).count()
 
             #get other data
