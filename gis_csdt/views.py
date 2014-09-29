@@ -2,7 +2,7 @@
 from django.contrib.gis.db.models import Count
 from django.shortcuts import render
 #from django.contrib.auth.models import User, Group
-from rest_framework import views, viewsets, permissions, response
+from rest_framework import views, viewsets, permissions, response, pagination
 from django.contrib.gis.geos import Polygon, Point
 
 from gis_csdt.models import Dataset, MapPoint, Tag, MapPolygon, TagIndiv, DataField, DataElement
@@ -115,9 +115,9 @@ class MapPointViewSet(viewsets.ReadOnlyModelViewSet):
         if 'max_lat' in bb and 'min_lat' in bb and 'max_lon' in bb and 'min_lon' in bb:
             mid_lat = (bb['max_lat'] + bb['min_lat']) / 2
             mid_lon = (bb['max_lon'] + bb['min_lon']) / 2
-            geom = Point(mid_lat, mid_lon)
+            geom = Polygon.from_bbox((bb['min_lon'],bb['min_lat'],bb['max_lon'],bb['max_lat']))#Point(mid_lat, mid_lon)
             #print geom
-            queryset = queryset.filter(mpoly__bboverlaps=geom)
+            queryset = queryset.filter(point__within=geom)
             #print queryset.query
         return queryset.distinct().all()
 
@@ -195,6 +195,7 @@ class CountPointsInPolygonView(views.APIView):
         dataset_ids = []
         
         bb = {}
+        use_csv = False
         for param, result in request.QUERY_PARAMS.items():
             p = param.lower()
             if p == 'dataset':
@@ -213,6 +214,9 @@ class CountPointsInPolygonView(views.APIView):
                     bb[p] = r
                 except:
                     continue
+            elif p == 'file' and result.lower() == 'csv':
+                use_csv = True
+            print p, result, use_csv
         #define bounding box
         if 'max_lat' in bb and 'min_lat' in bb and 'max_lon' in bb and 'min_lon' in bb:
             geom = Polygon.from_bbox((bb['min_lon'],bb['min_lat'],bb['max_lon'],bb['max_lat']))
@@ -263,8 +267,35 @@ class CountPointsInPolygonView(views.APIView):
         count = []
         mult_tags = len(tags) > 1
 
+        if use_csv:
+            csv_response = HttpResponse(content_type='text/csv')
+            filename = 'census_tract_stats'
+            for t in tags:
+                filename = filename + '_' + t
+            csv_response['Content-Disposition'] = 'attachment; filename="' + filename + '.csv"'
+            writer = csv.writer(csv_response)
+            firstrow = ['polygon_id', polygons[0].dataset.field1_en, polygons[0].dataset.field2_en]
+            for tag in tags:
+                try:
+                    num = int(tag)
+                    t = Tag.objects.get(pk = num)
+                    t = t.tag
+                except:
+                    t = tag
+                firstrow.append(t + " count")
+            if mult_tags:
+                if not matchall:
+                    firstrow.append(all_tags + " count (match any)")
+                firstrow.append(all_tags + " count (match all)")
+            for df in datafields:
+                firstrow.append(df.field_en)
+            writer.writerow(firstrow)
+
         for poly in polygons:
-            d = {"polygon_id": poly.remote_id, poly.dataset.field1_en : poly.field1, poly.dataset.field2_en : poly.field2}
+            if use_csv:
+                row = [poly.remote_id, poly.field1, poly.field2]
+            else:
+                d = {"polygon_id": poly.remote_id, poly.dataset.field1_en : poly.field1, poly.dataset.field2_en : poly.field2}
 
             #counts in polygons
             all_tag_filter = points
@@ -277,11 +308,20 @@ class CountPointsInPolygonView(views.APIView):
                     except:
                         temp = points.filter(tagindiv__tag__tag=tag)
                         all_tag_filter = points.filter(tagindiv__tag__tag=tag)
-                    d[tag + " count"] = temp.filter(point__contained = poly.mpoly).count()
+                    if use_csv:
+                        row.append(temp.filter(point__intersects = poly.mpoly).count())
+                    else:
+                        d[tag + " count"] = temp.filter(point__intersects = poly.mpoly).count()
                 if mult_tags:
-                    d[all_tags + " count (match any)"] = points.filter(point__contained = poly.mpoly).count()
+                    if use_csv:
+                        row.append(points.filter(point__intersects = poly.mpoly).count())
+                    else:
+                        d[all_tags + " count (match any)"] = points.filter(point__intersects = poly.mpoly).count()
             if mult_tags:
-                d[all_tags + " count (match all)"] = all_tag_filter.filter(point__contained = poly.mpoly).count()
+                if use_csv:
+                    row.append(all_tag_filter.filter(point__intersects = poly.mpoly).count())
+                else:
+                    d[all_tags + " count (match all)"] = all_tag_filter.filter(point__intersects = poly.mpoly).count()
 
             #get other data
             for df in datafields:
@@ -297,11 +337,19 @@ class CountPointsInPolygonView(views.APIView):
                     element = DataElement.objects.filter(datafield = df).filter(mappolygon=poly)
                     if element:
                         data = element[0].char_data
-
-                d[df.field_en] = data
-            count.append(d)
+                if use_csv:
+                    row.append(data)
+                else:
+                    d[df.field_en] = data
+            if use_csv:
+                writer.writerow(row)
+            else:
+                count.append(d)
+        if use_csv:
+            return csv_response
         paginator = Paginator(count,5)
-        return response.Response(count)
+        serializer = pagination.PaginationSerializer(instance = paginator)
+        return response.Response(serializer.data)#count)
 
 
 import csv

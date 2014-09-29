@@ -43,7 +43,7 @@ def run(verbose=True):
 
     MapPolygon.objects.filter(dataset = None).update(dataset = ds)
     
-def temp_switch():
+'''def temp_switch():
     for poly in MapPolygon.objects.all():
         lat = poly.field1
         lon = poly.field2
@@ -51,15 +51,12 @@ def temp_switch():
         poly.field2 = poly.lon
         poly.lat = lat
         poly.lon = lon
-        poly.save()
+        poly.save()'''
 
 def recount():
     all_tags = Tag.objects.all()
     for tag in all_tags:
         tag.recount(save=True)
-
-def create_points():
-    mps = MapPoint.objects.all()
 
 def get_income():
     key = settings.CENSUS_API_KEY
@@ -142,10 +139,13 @@ def get_income():
             
 def del_all():
     DataField.objects.all().delete()
-    
+
+import re, string
 def tag_by_name(filename='fastfood.json', name_field='Company', dataset=2, tag='fast food'):
     data = json.loads(open(os.path.abspath(os.path.join(os.path.dirname(__file__), 'data/'+filename))).read())
     data = data['data']
+
+    print data
 
     mps = MapPoint.objects.filter(dataset_id=dataset)
     tags = Tag.objects.filter(dataset_id=dataset).filter(tag=tag)
@@ -160,11 +160,14 @@ def tag_by_name(filename='fastfood.json', name_field='Company', dataset=2, tag='
     else:
         tag = tags[0]
 
+    regex = re.compile('[%s]' % re.escape(string.punctuation))
     for item in data:
-        for name in [item[name_field],item[name_field].replace("'",""),item[name_field].replace(".",""),item[name_field].replace(".","").replace("'","")]:
-            for mp in mps.filter(name__icontains=name):
-                t = TagIndiv(tag = tag, mappoint = mp)
-                t.save()
+        name = regex.sub(r'[\'\'\.-]*', item[name_field])
+        print name
+        for mp in mps.filter(name__iregex=name):
+            print mp.name
+            t = TagIndiv(tag = tag, mappoint = mp)
+            t.save()
             
 
 def add_point_to_mp():
