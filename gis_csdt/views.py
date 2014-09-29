@@ -80,9 +80,9 @@ class MapPointViewSet(viewsets.ReadOnlyModelViewSet):
                     queryset = queryset.filter(dataset__id__exact = r)
                 except:
                     queryset = queryset.filter(dataset__name__icontains = result.strip())
-            elif p in ['max_lat','min_lat','lat','max_lon','min_lon','lon']:
+            elif p in ['max_lat','min_lat','max_lon','min_lon']:
                 try:
-                    r = Decimal(result)
+                    r = float(result)
                     #for tolerance
                     minr = r - 0.0000005
                     maxr = r + 0.0000005 
@@ -113,8 +113,8 @@ class MapPointViewSet(viewsets.ReadOnlyModelViewSet):
                 queryset = queryset.filter(zipcode__iexact = result)
 
         if 'max_lat' in bb and 'min_lat' in bb and 'max_lon' in bb and 'min_lon' in bb:
-            mid_lat = (bb['max_lat'] + bb['min_lat']) / 2
-            mid_lon = (bb['max_lon'] + bb['min_lon']) / 2
+            #mid_lat = (bb['max_lat'] + bb['min_lat']) / 2
+            #mid_lon = (bb['max_lon'] + bb['min_lon']) / 2
             geom = Polygon.from_bbox((bb['min_lon'],bb['min_lat'],bb['max_lon'],bb['max_lat']))#Point(mid_lat, mid_lon)
             #print geom
             queryset = queryset.filter(point__within=geom)
