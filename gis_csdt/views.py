@@ -104,7 +104,8 @@ class MapPointViewSet(viewsets.ReadOnlyModelViewSet):
             elif p == 'street':
                 queryset = queryset.filter(street__iexact = result)
             elif p == 'city':
-                queryset = queryset.filter(street__iexact = result)
+                print result
+                queryset = queryset.filter(city__iexact = result)
             elif p == 'state':
                 queryset = queryset.filter(state__iexact = result)
             elif p == 'county':
