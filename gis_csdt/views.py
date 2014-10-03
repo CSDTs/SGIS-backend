@@ -42,6 +42,8 @@ class MapPointViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         t = False
+        radius = False
+        center = False
         matchall = False
         queryset = MapPoint.objects.none()
 
@@ -131,12 +133,9 @@ class MapPointViewSet(viewsets.ReadOnlyModelViewSet):
 
 
         if 'max_lat' in bb and 'min_lat' in bb and 'max_lon' in bb and 'min_lon' in bb:
-            #mid_lat = (bb['max_lat'] + bb['min_lat']) / 2
-            #mid_lon = (bb['max_lon'] + bb['min_lon']) / 2
-            geom = Polygon.from_bbox((bb['min_lon'],bb['min_lat'],bb['max_lon'],bb['max_lat']))#Point(mid_lat, mid_lon)
-            #print geom
+            geom = Polygon.from_bbox((bb['min_lon'],bb['min_lat'],bb['max_lon'],bb['max_lat']))
             queryset = queryset.filter(point__within=geom)
-            #print queryset.query
+
         if radius and center:
             queryset = queryset.filter(point__distance_lte = (center,Distance(mi=radius)))
         return queryset.distinct().all()
