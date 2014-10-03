@@ -141,6 +141,7 @@ class Dataset(models.Model):
 					else:
 						geocoded += 1
 				try:
+					new_point.point = Point(new_point.lon, new_point.lat)
 					new_point.save()
 				except:
 					new_point.lat = decimal.Decimal("0")
