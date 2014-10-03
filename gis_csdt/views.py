@@ -8,6 +8,7 @@ from django.contrib.gis.geos import Polygon, Point
 from gis_csdt.models import Dataset, MapPoint, Tag, MapPolygon, TagIndiv, DataField, DataElement
 from gis_csdt.serializers import TagCountSerializer, DatasetSerializer, MapPointSerializer, NewTagSerializer, TagSerializer, NewTagSerializer, MapPolygonSerializer #, CountPointsInPolygonSerializer
 from django.core.paginator import Paginator
+from django.contrib.gis.measure import Distance, Area
 
 
 class TagViewSet(viewsets.ModelViewSet):
@@ -112,6 +113,22 @@ class MapPointViewSet(viewsets.ReadOnlyModelViewSet):
                 queryset = queryset.filter(county__iexact = result)
             elif p in ['zipcode','zip','zip_code']:
                 queryset = queryset.filter(zipcode__iexact = result)
+            elif param == 'radius':
+                try:
+                    radius = int(result)
+                except:
+                    return HttpResponseBadRequest('Invalid radius. Only integers accepted.' )
+            elif param == 'center':
+                temp = result.split(',')
+                try:
+                    if len(temp) != 2:
+                        raise 
+                    temp[0] = float(temp[0])
+                    temp[1] = float(temp[1])
+                    center = Point(temp[0],temp[1])
+                except:
+                    return HttpResponseBadRequest('Invalid center. Format is: center=lon,lat' )
+
 
         if 'max_lat' in bb and 'min_lat' in bb and 'max_lon' in bb and 'min_lon' in bb:
             #mid_lat = (bb['max_lat'] + bb['min_lat']) / 2
@@ -120,6 +137,8 @@ class MapPointViewSet(viewsets.ReadOnlyModelViewSet):
             #print geom
             queryset = queryset.filter(point__within=geom)
             #print queryset.query
+        if radius and center:
+            queryset = queryset.filter(point__distance_lte = (center,Distance(mi=radius)))
         return queryset.distinct().all()
 
 class MapPolygonViewSet(viewsets.ReadOnlyModelViewSet):
@@ -362,15 +381,33 @@ def AnalyzeAreaAroundPointView(request):
 
     dataset_list = request.GET.getlist('dataset')
     if len(dataset_list) != 1:
-        return HttpResponseBadRequest(reason_phrase = 'Exactly one dataset must be specified')
+        print dataset_list
+        print request.QUERY_PARAMS.items()
+        return HttpResponseBadRequest('Exactly one dataset must be specified')
+
+
     id_list = request.GET.getlist('id')
     distances = request.GET.getlist('distance')
     unit = request.GET.getlist('unit')
     years = request.GET.getlist('year')
+    level = request.GET.getlist('level')
+
+    
     if len(unit) > 1:
-        return HttpResponseBadRequest(reason_phrase = 'No more than one unit may be specified')
+        return HttpResponseBadRequest('No more than one unit may be specified')
     elif len(unit) == 0:
         unit = 'mi'
+    elif unit[0] in ['m','km','mi']:
+        unit = unit[0]
+    else:
+        return HttpResponseBadRequest('Accepted units: m, km, mi')
+    if len(level) == 1 and level[0] == 'point':
+        by_point = True
+    elif len(level) == 0:
+        by_point = False
+    else:
+        return HttpResponseBadRequest('Please specify level as "point" or not at all' )
+
 
     if len(distances) == 0:
         distances = [1,3,5]
@@ -384,28 +421,108 @@ def AnalyzeAreaAroundPointView(request):
             n = int(i)
             ids.append(n)
         except:
-            pass
-    points = MapPoint.filter(dataset__id__exact = d)
+            return HttpResponseBadRequest('Please use MapPoint ids (integers) only')
+    try:
+        dataset_id = int(dataset_ids[0])
+    except:
+        return HttpResponseBadRequest('Dataset must be given as an id (integer)')
+
+    all_points = MapPoint.filter(dataset__id__exact = dataset_id)
+
     if len(id_list) > 0:
-        points = points.in_bulk(ids).all()
+        points = all_points.in_bulk(ids).all()
     else:
-        points.points.all()
+        points = all_points.all()
 
-    counties = {}
-    for point in points:
-        others = MapPoint.filter(dataset__id__exact = d).exclude(id__exact=point.id)
-        max_dist_between = distances[-1] * 2
-        #others  = others. 
-        #point.point
+    firstrow = ['Year','Region']
+    firstrow.append('Field Name')
+    #distances must have at least one element by this point
+    last = distances[0]
+    firstrow.append('Within '+str(last)+' '+unit)
+    for d in distances[1:]:
+        firstrow.append('Between '+str(last)+' '+unit+' and '+str(d)+' '+unit)
+        last = d
+    firstrow.append('Beyond '+str(last)+' '+unit)
 
 
+    filename = 'distance_report'
     # Create the HttpResponse object with the appropriate CSV header.
     response = HttpResponse(content_type='text/csv')
-    response['Content-Disposition'] = 'attachment; filename="somefilename.csv"'
-
+    response['Content-Disposition'] = 'attachment; filename="'+filename+'.csv"'
     writer = csv.writer(response)
-    writer.writerow(['First row', 'Foo', 'Bar', 'Baz'])
-    writer.writerow(['Second row', 'A', 'B', 'C', '"Testing"', "Here's a quote"])
+    writer.writerow(firstrow)
+
+    max_dist_between = distances[-1] * 2
+    kwargs = {unit: max_dist_between}
+    max_dist_between =  Distance(**kwargs)#exec('Distance('unit+'=max_dist_between)')
+    kwargs = {unit: distance}
+    distances = Distance(**kwargs) #[exec('Distance('+unit+'=distance)') for distance in distances]
+
+    
+    for year in years:
+        totals = []
+        poly_dataset = Dataset.objects.filter(name__icontains='census').filter(name__icontains=year.strip())
+        if len(poly_dataset) < 1:
+            return HttpResponseBadRequest('Census year data does not exist for the year '+year)
+        poly_dataset = poly_dataset[0]
+        datafields = DataField.objects.filter(dataset_id__exact=poly_dataset.id).exclude(field_type__exact=DataField.STRING)
+        data_sums_total = {}
+        data_sums = {}
+        for point in points:
+            if by_point:
+                point_name = point.name
+            nearby = all_points.exclude(id__exact=point.id).filter(point__distance_lte=(point.point, max_dist_between))
+            for n in nearby:
+                if by_point:
+                    point_name = point_name + ',' + n.name
+                points = points.exclude(id__exact=n.id)
+
+            last = Distance(ft=0)
+            for dist in distances:
+                polys = MapPolygon.objects.filter(dataset_id__exact=poly_dataset.id).filter(poly__dwithin=(point.point,dist)).exclude(poly__dwithin=(point.point,last))
+                for n in nearby:
+                    polys = polys | MapPolygon.objects.filter(dataset_id__exact=poly_dataset.id).filter(poly__dwithin=(n.point,dist)).exclude(poly__dwithin=(n.point,last))
+                
+                for poly in polys:
+                    for field in datafields:
+                        if field not in data_sums:
+                            data_sums[field] = {}
+                        if dist not in data_sums[field]:
+                            data_sums[field][dist] = 0
+                        try:
+                            de = DataElement.objects.filter(datafield_id__exact=field.id).filter(mappolygon_id__exact=poly.id)
+                        except DataElement.DoesNotExist:
+                            continue
+                        if field.type == DataField.INTEGER:
+                            data_sums[field][dist] = data_sums[field][dist] + de.int_data
+                        elif field.type == DataField.FLOAT:
+                            data_sums[field][dist] = data_sums[field][dist] + de.float_data
+
+                last = dist
+            if by_point:
+                for field in data_sums:
+                    row = [year,point_name,field]
+                    for dist in distances:
+                        if field not in data_sums_total:
+                            data_sums_total[field] = {}
+                        if dist not in data_sums_total[field]:
+                            data_sums_total[field][dist] = 0
+                        row.append(data_sums[field][dist])
+                        data_sums_total[field][dist] = data_sums_total[field][dist] + data_sums[field][dist]
+                    writer.writerow(row)
+                data_sums = {}
+        if not by_point:
+            data_sums_total = data_sums
+        for field in data_sums:
+            row = [year,point_name,field]
+            for dist in distances:
+                if field not in data_sums_total:
+                    data_sums_total[field] = {}
+                if dist not in data_sums_total[field]:
+                    data_sums_total[field][dist] = 0
+                row.append(data_sums[field][dist])
+                data_sums_total[field][dist] = data_sums_total[field][dist] + data_sums[field][dist]
+            writer.writerow(row)
 
     return response
 ##doesn't belong in views
