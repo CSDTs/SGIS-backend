@@ -115,10 +115,12 @@ class Dataset(models.Model):
 						continue
 					elif points[i].remote_id < str(item[self.remote_id_field]):
 						try:
+							points[i].delete() 
 							print 'Deleting point:', points[i]
-							points[i].delete()
 						except:
+							print 'Failed to delete point', points[i]
 							#not a huge deal if it fails
+							i += 1
 							pass
 						continue
 				new_point = MapPoint(dataset = self)
