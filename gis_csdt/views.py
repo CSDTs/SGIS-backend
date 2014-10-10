@@ -527,3 +527,112 @@ def AnalyzeAreaAroundPointView(request):
 ##doesn't belong in views
 def findCensusTracts():
     pass
+
+
+
+
+
+from gis_csdt.serializers import TestSerializer
+class TestView(viewsets.ReadOnlyModelViewSet):
+    serializer_class = TestSerializer
+    model = MapPoint
+    
+    def get_queryset(self):
+        t = False
+        radius = False
+        center = False
+        matchall = False
+        queryset = MapPoint.objects.none()
+
+        for (param, result) in self.request.QUERY_PARAMS.items():
+            if param in ['tag','tags']:
+                t = result
+            elif param == 'match' and result == 'all':
+                matchall = True
+        if t:
+            t = t.split(',')
+            if type(t) is not list:
+                t = [t]
+            if matchall:
+                queryset = MapPoint.objects
+                for tag in t:
+                    try:
+                        num = int(tag)
+                        queryset = queryset.filter(tagindiv__tag=num)
+                    except:
+                        queryset = queryset.filter(tagindiv__tag__tag=tag)
+            else:
+                for tag in t:
+                    try:
+                        num = int(tag)
+                        queryset = queryset | MapPoint.objects.filter(tagindiv__tag=num)
+                    except:
+                        queryset = queryset | MapPoint.objects.filter(tagindiv__tag__tag=tag)
+            queryset = queryset.filter(tagindiv__tag__approved=True)
+        else:
+            queryset = MapPoint.objects
+        bb = {}
+        for param, result in self.request.QUERY_PARAMS.items():
+            p = param.lower()
+            if p == 'dataset':
+                try:
+                    r = int(result)
+                    queryset = queryset.filter(dataset__id__exact = r)
+                except:
+                    queryset = queryset.filter(dataset__name__icontains = result.strip())
+            elif p in ['max_lat','min_lat','max_lon','min_lon']:
+                try:
+                    r = float(result)
+                    #for tolerance
+                    minr = r - 0.0000005
+                    maxr = r + 0.0000005 
+                except:
+                    continue
+                if p == 'max_lat' or p == 'lat':
+                    queryset = queryset.filter(lat__lte = maxr)
+                    bb['max_lat'] = maxr
+                if p == 'min_lat' or p == 'lat':
+                    queryset = queryset.filter(lat__gte = minr)
+                    bb['min_lat'] = minr
+                    continue
+                if p == 'max_lon' or p == 'lon':
+                    queryset = queryset.filter(lon__lte = maxr)
+                    bb['max_lon'] = maxr
+                if p == 'min_lon' or p == 'lon':
+                    queryset = queryset.filter(lon__gte = minr)
+                    bb['min_lon'] = minr
+            elif p == 'street':
+                queryset = queryset.filter(street__iexact = result)
+            elif p == 'city':
+                print result
+                queryset = queryset.filter(city__iexact = result)
+            elif p == 'state':
+                queryset = queryset.filter(state__iexact = result)
+            elif p == 'county':
+                queryset = queryset.filter(county__iexact = result)
+            elif p in ['zipcode','zip','zip_code']:
+                queryset = queryset.filter(zipcode__iexact = result)
+            elif param == 'radius':
+                try:
+                    radius = int(result)
+                except:
+                    return HttpResponseBadRequest('Invalid radius. Only integers accepted.' )
+            elif param == 'center':
+                temp = result.split(',')
+                try:
+                    if len(temp) != 2:
+                        raise 
+                    temp[0] = float(temp[0])
+                    temp[1] = float(temp[1])
+                    center = Point(temp[0],temp[1])
+                except:
+                    return HttpResponseBadRequest('Invalid center. Format is: center=lon,lat' )
+
+
+        if 'max_lat' in bb and 'min_lat' in bb and 'max_lon' in bb and 'min_lon' in bb:
+            geom = Polygon.from_bbox((bb['min_lon'],bb['min_lat'],bb['max_lon'],bb['max_lat']))
+            queryset = queryset.filter(point__within=geom)
+
+        if radius and center:
+            queryset = queryset.filter(point__distance_lte = (center,Distance(mi=radius)))
+        return queryset.distinct().all()

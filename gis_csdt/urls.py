@@ -10,6 +10,7 @@ router.register(r'api-mp', views.MapPointViewSet, base_name = 'mappoint')
 router.register(r'api-newtag', views.NewTagViewSet)
 router.register(r'api-poly', views.MapPolygonViewSet, base_name = 'mappolygon')
 router.register(r'api-tag', views.TagViewSet)
+router.register(r'api-test', views.TestView)
 #router.register(r'api-count', views.CountPointsInPolygonView.as_view(), base_name = 'count')
 #router.register(r'api-tag/count', views.TagCountViewSet, base_name = 'tag')
 

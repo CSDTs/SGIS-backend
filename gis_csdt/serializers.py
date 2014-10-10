@@ -95,6 +95,21 @@ class MapPointSerializer(serializers.HyperlinkedModelSerializer):
         model = MapPoint 
         fields = ('dataset','id','name','latitude','longitude','street','city','state','zipcode','county','field1','field2','field3','tags')
 
+class TestSerializer(gis_serializers.GeoFeatureModelSerializer):
+    latitude = serializers.DecimalField(source = 'lat')
+    longitude = serializers.DecimalField(source = 'lon')
+
+    tags = serializers.SerializerMethodField('get_tags')
+    def get_tags(self, mappoint):
+        #build nested distinct list
+        return Tag.objects.filter(approved=True, tagindiv__mappoint=mappoint).distinct('id','tag').values('id','tag')
+
+    class Meta:
+        id_field = False
+        geo_field = 'point'
+        model = MapPoint 
+        fields = ('dataset','id','name','latitude','longitude','street','city','state','zipcode','county','field1','field2','field3','tags')
+
 class MapPolygonSerializer(gis_serializers.GeoFeatureModelSerializer):
     latitude = serializers.DecimalField(source = 'lat')
     longitude = serializers.DecimalField(source = 'lon')
