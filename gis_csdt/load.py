@@ -11,6 +11,13 @@ from django.contrib.gis.geos import Polygon, Point
 import ftplib, zipfile
 
 def run(verbose=True, year=2010, starting_state=1):
+
+    yn = ''
+    #https://docs.djangoproject.com/en/1.7/ref/contrib/gis/layermapping/
+    while yn != 'y':
+        yn = raw_input('This process can be memory-intensive if DEBUG = True in settings as this logs all SQL. Please set this to False if you are experiencing issues. Continue (y/n)?').lower().strip()
+        if yn == 'n':
+            return
     ds = Dataset(name = str(year) + ' Census Tracts',
         cached = datetime.utcnow().replace(tzinfo=utc),
         cache_max_age = 1000,
@@ -65,7 +72,19 @@ def run(verbose=True, year=2010, starting_state=1):
         if verbose:
             print '\tBegin layer mapping...'
         lm = LayerMapping(MapPolygon, tract_shp, tract_mapping, transform=False, encoding='iso-8859-1')
-        lm.save(strict=True, verbose=verbose)
+
+        while True:
+            try:
+                lm.save(strict=True, verbose=verbose)
+                break
+            except Exception as inst:
+                yn = ''
+                while yn not in ['n','y']:
+                    yn = raw_input('Error saving: '+ inst).strip().lower() + '\nContinue (y/n)?')
+                if yn == 'y':
+                    MapPolygon.objects.filter(dataset_id__isnull=True).filter(remote_id__startswith=i).delete()
+                else:
+                    break
         if verbose:
             print '\tLayer mapping done.'
     ftp.quit()
