@@ -7,7 +7,7 @@ from django.db.models import Q#, Count
 
 import json, urllib, pycurl, decimal
 
-BATCH_SIZE = 5000
+BATCH_SIZE = 50000
 
 class Dataset(models.Model):
 	name = models.CharField(max_length=200)
@@ -96,7 +96,13 @@ class Dataset(models.Model):
 		fields['field2'] = [x.split('+') for x in self.field2_name.split(',')]
 		fields['field3'] = [x.split('+') for x in self.field3_name.split(',')]
 
-		
+		#if there's no remote id, there's no easy way to compare cached with current
+		#so just chuck it all and start again
+		#if self.remote_id_field == '':
+		#	points.delete()
+		#err....what about the tags?
+
+
 		try_geocoding = self.needs_geocoding
 		rec_read = len(json_in)
 		i = 0
@@ -117,12 +123,12 @@ class Dataset(models.Model):
 						try:
 							print 'Deleting point:', points[i],
 							points[i].delete()
-							print '...deleted' 
 						except:
-							print 'Failed to delete point', points[i]
+							print '...failed to delete point', points[i]
 							#not a huge deal if it fails
 							i += 1
-							pass
+							continue
+						print '...deleted'
 						continue
 				new_point = MapPoint(dataset = self)
 				for field in fields:
@@ -210,6 +216,7 @@ class MapPoint(MapElement):
 		key = settings.GOOGLE_API_KEY
 		location = urllib.quote_plus(self.street + ', ' + self.city + ', ' + self.state + ', ' + self.zipcode)
 		request = 'https://maps.googleapis.com/maps/api/geocode/json?address=%s&key=%s&sensor=false' % (location, key)
+		#print request
 		j = json.loads(urllib.urlopen(request).read())
 		if j['status'] == 'OK':
 			try:
