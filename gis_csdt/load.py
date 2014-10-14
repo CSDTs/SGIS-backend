@@ -10,7 +10,7 @@ from django.conf import settings
 from django.contrib.gis.geos import Polygon, Point
 import ftplib, zipfile
 
-def run(verbose=True, year=2010):
+def run(verbose=True, year=2010, starting_state=1):
     ds = Dataset(name = str(year) + ' Census Tracts',
         cached = datetime.utcnow().replace(tzinfo=utc),
         cache_max_age = 1000,
@@ -39,7 +39,7 @@ def run(verbose=True, year=2010):
     ftp.cwd("/geo/tiger/TIGER2010/TRACT/"+str(year)+"/")
     files = ftp.nlst()
 
-    for i in [format(x,'#02d') for x in range(1,99)]:
+    for i in [format(x,'#02d') for x in range(starting_state,100)]:
         short_name = 'tl_'+str(year)+'_'+i+'_tract10'
         tract_shp = os.path.abspath(os.path.join(os.path.dirname(__file__), 'data/'+short_name))
         if not os.path.isfile(tract_shp+'.shp') or not os.path.isfile(tract_shp+'.shx') or not os.path.isfile(tract_shp+'.shp.xml') or not os.path.isfile(tract_shp+'.prj') or not os.path.isfile(tract_shp+'.dbf'):
