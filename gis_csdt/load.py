@@ -8,9 +8,10 @@ from datetime import datetime
 from django.utils.timezone import utc
 from django.conf import settings
 from django.contrib.gis.geos import Polygon, Point
+import ftplib, zipfile
 
-def run(verbose=True):
-    ds = Dataset(name = '2010 Census Tracts',
+def run(verbose=True, year=2010):
+    ds = Dataset(name = str(year) + ' Census Tracts',
         cached = datetime.utcnow().replace(tzinfo=utc),
         cache_max_age = 1000,
         remote_id_field = 'GEOID10',
@@ -33,15 +34,48 @@ def run(verbose=True):
         'mpoly' : 'MULTIPOLYGON',
     }
 
-    tract_shp = os.path.abspath(os.path.join(os.path.dirname(__file__), 'data/tl_2010_36_tract10.shp'))
+    ftp = ftplib.FTP('ftp2.census.gov')
+    ftp.login()
+    ftp.cwd("/geo/tiger/TIGER2010/TRACT/"+str(year)+"/")
+    files = ftp.nlst()
 
-    lm = LayerMapping(MapPolygon, tract_shp, tract_mapping, transform=False, encoding='iso-8859-1')
-
-    lm.save(strict=True, verbose=verbose)
-
+    for i in [format(x,'#02d') for x in range(1,99)]:
+        short_name = 'tl_'+str(year)+'_'+i+'_tract10'
+        tract_shp = os.path.abspath(os.path.join(os.path.dirname(__file__), 'data/'+short_name))
+        if not os.path.isfile(tract_shp+'.shp') or not os.path.isfile(tract_shp+'.shx') or not os.path.isfile(tract_shp+'.shp.xml') or not os.path.isfile(tract_shp+'.prj') or not os.path.isfile(tract_shp+'.dbf'):
+            if short_name + '.zip' not in files:
+                continue
+            if verbose:
+                print short_name + '.shp does not exist locally.\n\tDownloading from Census FTP...'
+            try:
+                #download the file
+                local_file = open(tract_shp+'.zip', 'wb')
+                ftp.retrbinary('RETR '+short_name+'.zip', local_file.write)
+                local_file.close()
+                #open the zip
+                zipped = zipfile.ZipFile(tract_shp+'.zip')
+                for suffix in ['.shp','.prj','.dbf','.shp.xml','.shx']:
+                    zipped.extract(short_name+suffix, os.path.abspath(os.path.join(os.path.dirname(__file__), 'data')))
+            except Exception as inst:
+                if verbose:
+                    print '\tException:', inst
+                    print '\t'+short_name+'.shp did not download or unzip correctly. Moving on...'
+                continue
+        tract_shp = tract_shp + '.shp'
+        if verbose:
+            print '\tBegin layer mapping...'
+        lm = LayerMapping(MapPolygon, tract_shp, tract_mapping, transform=False, encoding='iso-8859-1')
+        lm.save(strict=True, verbose=verbose)
+        if verbose:
+            print '\tLayer mapping done.'
+    ftp.quit()
     ds.save()
 
+    if verbose:
+        print 'All shapefiles added.'
     MapPolygon.objects.filter(dataset = None).update(dataset = ds)
+    if verbose:
+        print 'All geometires associated with the dataset object'
     
 '''def temp_switch():
     for poly in MapPolygon.objects.all():
