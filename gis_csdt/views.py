@@ -4,7 +4,6 @@ from django.shortcuts import render
 #from django.contrib.auth.models import User, Group
 from rest_framework import views, viewsets, permissions, response, pagination
 from django.contrib.gis.geos import Polygon, Point
-
 from gis_csdt.models import Dataset, MapPoint, Tag, MapPolygon, TagIndiv, DataField, DataElement
 from gis_csdt.serializers import TagCountSerializer, DatasetSerializer, MapPointSerializer, NewTagSerializer, TagSerializer, NewTagSerializer, MapPolygonSerializer #, CountPointsInPolygonSerializer
 from django.core.paginator import Paginator
@@ -212,7 +211,8 @@ class CountPointsInPolygonView(views.APIView):
         matchall = False
         polygons = MapPolygon.objects
         dataset_ids = []
-        
+        state = ''
+
         bb = {}
         use_csv = False
         for param, result in request.QUERY_PARAMS.items():
@@ -235,6 +235,8 @@ class CountPointsInPolygonView(views.APIView):
                     continue
             elif p == 'file' and result.lower() == 'csv':
                 use_csv = True
+            elif p =='state':
+                state = result
             print p, result, use_csv
         #define bounding box
         if 'max_lat' in bb and 'min_lat' in bb and 'max_lon' in bb and 'min_lon' in bb:
@@ -282,6 +284,8 @@ class CountPointsInPolygonView(views.APIView):
         
         datafields = DataField.objects.all()
         points = points.distinct()
+        if state != '':
+            polygons = polygons.filter(remote_id__startswith=state)
         polygons = polygons.distinct()
         count = []
         mult_tags = len(tags) > 1
@@ -293,6 +297,7 @@ class CountPointsInPolygonView(views.APIView):
                 filename = filename + '_' + t
             csv_response['Content-Disposition'] = 'attachment; filename="' + filename + '.csv"'
             writer = csv.writer(csv_response)
+
             firstrow = ['polygon_id', polygons[0].dataset.field1_en, polygons[0].dataset.field2_en]
             for tag in tags:
                 try:
@@ -331,6 +336,7 @@ class CountPointsInPolygonView(views.APIView):
                         row.append(temp.filter(point__intersects = poly.mpoly).count())
                     else:
                         d[tag + " count"] = temp.filter(point__intersects = poly.mpoly).count()
+                print points.filter(point__intersects = poly.mpoly).query
                 if mult_tags:
                     if use_csv:
                         row.append(points.filter(point__intersects = poly.mpoly).count())
@@ -344,6 +350,7 @@ class CountPointsInPolygonView(views.APIView):
 
             #get other data
             for df in datafields:
+                data = None
                 if df.field_type == DataField.INTEGER:
                     element = DataElement.objects.filter(datafield = df).filter(mappolygon=poly)
                     if element:
@@ -357,7 +364,10 @@ class CountPointsInPolygonView(views.APIView):
                     if element:
                         data = element[0].char_data
                 if use_csv:
-                    row.append(data)
+                    if data:
+                        row.append(data)
+                    else:
+                        row.append('')
                 else:
                     d[df.field_en] = data
             if use_csv:
@@ -366,9 +376,9 @@ class CountPointsInPolygonView(views.APIView):
                 count.append(d)
         if use_csv:
             return csv_response
-        paginator = Paginator(count,5)
-        serializer = pagination.PaginationSerializer(instance = paginator)
-        return response.Response(serializer.data)#count)
+        #paginator = Paginator(count,5)
+        #serializer = pagination.PaginationSerializer(instance = paginator)
+        return response.Response(count)
 
 
 import csv
@@ -536,7 +546,7 @@ from gis_csdt.serializers import TestSerializer
 class TestView(viewsets.ReadOnlyModelViewSet):
     serializer_class = TestSerializer
     model = MapPoint
-    
+
     def get_queryset(self):
         t = False
         radius = False

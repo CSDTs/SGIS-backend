@@ -1,14 +1,14 @@
 ##This file includes functions to load basic information
 ##should be used from the shell
 
-import os, decimal, json, urllib
+import os, decimal, json, urllib, ftplib, zipfile
 from django.contrib.gis.utils import LayerMapping
 from models import MapPolygon, MapPoint, Dataset, DataField, DataElement, Tag, TagIndiv
 from datetime import datetime
 from django.utils.timezone import utc
 from django.conf import settings
 from django.contrib.gis.geos import Polygon, Point
-import ftplib, zipfile
+from django.db import connection
 
 def run(verbose=True, year=2010, starting_state=1):
 
@@ -77,6 +77,7 @@ def run(verbose=True, year=2010, starting_state=1):
             try:
                 lm.save(strict=True, verbose=verbose)
                 break
+            #exception part is untested, error didn't happen again
             except Exception as inst:
                 yn = ''
                 while yn not in ['n','y']:
@@ -111,16 +112,24 @@ def recount():
     for tag in all_tags:
         tag.recount(save=True)
 
-def get_income():
+def get_income(year = 2010, ds_id = 0):
     key = settings.CENSUS_API_KEY
-    state = '36'
 
-    ds = Dataset.objects.filter(name__icontains='census').filter(name__contains='2010').all()
+    ds = Dataset.objects.filter(name__icontains='census').filter(name__contains=str(year)).all()
     if len(ds) == 0:
         print 'No Census dataset exists. Aborting'
         return
     elif len(ds) > 1:
-        print 'More than one 2010 Census dataset exists. Using ID %d' %(d[0].id)
+        if ds_id>0:
+            ds = [ds.get(pk=ds_id)]
+        else:
+            print 'More than one 2010 Census dataset exists. Using ID %d' %(ds[0].id)
+
+    '''cursor = connection.cursor()
+    cursor.execute("select distinct(substring(remote_id from 1 for 2)) from gis_csdt_mappolygon;")
+    states = [s[0] for s in cursor.fetchall()]
+    '''
+
 
     #http://www.census.gov/data/developers/data-sets/acs-survey-5-year-data.html
     #http://api.census.gov/data/2010/acs5/variables.html
@@ -136,59 +145,62 @@ def get_income():
         get = get + ',' + item['variable']
     get = get.strip(', ')
 
-    #get the data
-    request = 'http://api.census.gov/data/2010/acs5?key=%s&get=%s,NAME&for=tract:*&in=state:%s' %(key,get,state)
-    data = json.loads(urllib.urlopen(request).read())
-    converted = {}
-    #locations of basic data in each list
-    #format like:
-    #[["B19013_001E","B01003_001E","NAME","state","county","tract"],
-    #["32333","2308","Census Tract 1, Albany County, New York","36","001","000100"],
-    #...]
-    for col in range(len(data[0])):
-        if data[0][col] == 'NAME':
-            n = col
-        elif data[0][col] == 'state':
-            s = col
-        elif data[0][col] == 'county':
-            c = col
-        elif data[0][col] == 'tract':
-            t = col
-    for d in data[1:]:
-        census_tract = d[s] + d[c] + d[t]
-        converted[census_tract] = {}
-        for num in range(n):
-            if d[num] is not None:
-                converted[census_tract][data[0][num]] = d[num].strip()
-    #converted now looks like
-    # {"36001000100": {"B19013_001E": "32333","B01003_001E": "2308"},
-    #  "36001000200": {"B19013_001E": "25354","B01003_001E": "5506"},...}
-    for poly in MapPolygon.objects.filter(dataset = ds[0]):
-        if poly.remote_id in converted:
-            for df in dfs:
-                if df.field_name in converted[poly.remote_id]:
-                    de = DataElement(datafield = df,mappolygon = poly)
-                    if df.field_type == DataField.INTEGER:
-                        try:
-                            de.int_data = int(converted[poly.remote_id][df.field_name])
-                        except:
-                            print 'integer conversion failed for census tract %s, field %s' %(poly.remote_id, df.field_name)
-                            print 'value:', converted[poly.remote_id][df.field_name]
-                    elif df.field_type == DataField.FLOAT:
-                        try:
-                            de.float_data = float(converted[poly.remote_id][df.field_name])
-                        except:
-                            print 'float conversion failed for census tract %s, field %s' %(poly.remote_id, df.field_name)
-                    elif df.field_type == DataField.STRING:
-                        if len(converted[poly.remote_id][df.field_name]) > 200:
-                            print 'string overload - string truncated as shown:'
-                            print '%s[%s]' %(converted[poly.remote_id][df.field_name][:200],converted[poly.remote_id][df.field_name][200:])
-                            de.char_data = converted[poly.remote_id][df.field_name][:200]
-                        else:
-                            de.char_data = converted[poly.remote_id][df.field_name]
-                    de.save()
-        else:
-            print 'ERROR: Tract #%s is not in the dataset' %(poly.remote_id)
+    counties = json.loads(urllib.urlopen('http://api.census.gov/data/2010/acs5?key='+key+'&get=NAME&for=county:*').read())
+    #i could technically call this once, but it's just too much data at once so i'm splitting by state
+    for county in counties[1:]:
+        #get the data
+        request = 'http://api.census.gov/data/2010/acs5?key=%s&get=%s,NAME&for=tract:*&in=state:%s,county:%s' %(key,get,county[1],county[2])
+        data = json.loads(urllib.urlopen(request).read())
+        converted = {}
+        #locations of basic data in each list
+        #format like:
+        #[["B19013_001E","B01003_001E","NAME","state","county","tract"],
+        #["32333","2308","Census Tract 1, Albany County, New York","36","001","000100"],
+        #...]
+        for col in range(len(data[0])):
+            if data[0][col] == 'NAME':
+                n = col
+            elif data[0][col] == 'state':
+                s = col
+            elif data[0][col] == 'county':
+                c = col
+            elif data[0][col] == 'tract':
+                t = col
+        for d in data[1:]:
+            census_tract = d[s] + d[c] + d[t]
+            converted[census_tract] = {}
+            for num in range(n):
+                if d[num] is not None:
+                    converted[census_tract][data[0][num]] = d[num].strip()
+        #converted now looks like
+        # {"36001000100": {"B19013_001E": "32333","B01003_001E": "2308"},
+        #  "36001000200": {"B19013_001E": "25354","B01003_001E": "5506"},...}
+        for poly in MapPolygon.objects.filter(dataset = ds[0]).filter(remote_id__startswith=county[1]+county[2]):
+            if poly.remote_id in converted:
+                for df in dfs:
+                    if df.field_name in converted[poly.remote_id]:
+                        de = DataElement(datafield = df,mappolygon = poly)
+                        if df.field_type == DataField.INTEGER:
+                            try:
+                                de.int_data = int(converted[poly.remote_id][df.field_name])
+                            except:
+                                print 'integer conversion failed for census tract %s, field %s' %(poly.remote_id, df.field_name)
+                                print 'value:', converted[poly.remote_id][df.field_name]
+                        elif df.field_type == DataField.FLOAT:
+                            try:
+                                de.float_data = float(converted[poly.remote_id][df.field_name])
+                            except:
+                                print 'float conversion failed for census tract %s, field %s' %(poly.remote_id, df.field_name)
+                        elif df.field_type == DataField.STRING:
+                            if len(converted[poly.remote_id][df.field_name]) > 200:
+                                print 'string overload - string truncated as shown:'
+                                print '%s[%s]' %(converted[poly.remote_id][df.field_name][:200],converted[poly.remote_id][df.field_name][200:])
+                                de.char_data = converted[poly.remote_id][df.field_name][:200]
+                            else:
+                                de.char_data = converted[poly.remote_id][df.field_name]
+                        de.save()
+            else:
+                print 'ERROR: Tract #%s is not in the dataset' %(poly.remote_id)
             
 def del_all():
     DataField.objects.all().delete()
