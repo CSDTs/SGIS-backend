@@ -352,15 +352,15 @@ class CountPointsInPolygonView(views.APIView):
             for df in datafields:
                 data = None
                 if df.field_type == DataField.INTEGER:
-                    element = DataElement.objects.filter(datafield = df).filter(mappolygon=poly)
+                    element = DataElement.objects.filter(datafield = df).filter(mapelement=poly)
                     if element:
                         data = element[0].int_data
                 elif df.field_type == DataField.FLOAT:
-                    element = DataElement.objects.filter(datafield = df).filter(mappolygon=poly)
+                    element = DataElement.objects.filter(datafield = df).filter(mapelement=poly)
                     if element:
                         data = element[0].float_data
                 else:
-                    element = DataElement.objects.filter(datafield = df).filter(mappolygon=poly)
+                    element = DataElement.objects.filter(datafield = df).filter(mapelement=poly)
                     if element:
                         data = element[0].char_data
                 if use_csv:
@@ -499,7 +499,7 @@ def AnalyzeAreaAroundPointView(request):
                         if dist not in data_sums[field]:
                             data_sums[field][dist] = 0
                         try:
-                            de = DataElement.objects.filter(datafield_id__exact=field.id).filter(mappolygon_id__exact=poly.id)
+                            de = DataElement.objects.filter(datafield_id__exact=field.id).filter(mapelement_id__exact=poly.id)
                         except DataElement.DoesNotExist:
                             continue
                         if field.type == DataField.INTEGER:

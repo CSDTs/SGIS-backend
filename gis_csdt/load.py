@@ -99,7 +99,7 @@ def run(verbose=True, year=2010, starting_state=1):
             except Exception as inst:
                 yn = ''
                 while yn not in ['n','y']:
-                    yn = raw_input('Error saving: '+ inst + '\nContinue (y/n)?').strip().lower()
+                    yn = raw_input('Error saving: '+ str(inst) + '\nContinue (y/n)?').strip().lower()
                 if yn == 'y':
                     MapPolygon.objects.filter(dataset_id__isnull=True).filter(remote_id__startswith=i).delete()
                 else:

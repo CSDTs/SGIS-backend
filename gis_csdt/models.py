@@ -6,7 +6,7 @@ from django.db.models import Q#, Count
 
 import json, urllib, pycurl, decimal
 
-BATCH_SIZE = 20000
+BATCH_SIZE = 5000
 
 class Dataset(models.Model):
 	name = models.CharField(max_length=200)
@@ -214,6 +214,9 @@ class MapPoint(MapElement):
 	county = models.CharField(blank=True,max_length=75)
 	geocoded = models.BooleanField(blank=True,default = False)
 
+	#must be included in children too
+	objects = models.GeoManager()
+
 	def geocode(self, unknown_count = 0):
 		key = settings.GOOGLE_API_KEY
 		location = urllib.quote_plus(self.street + ', ' + self.city + ', ' + self.state + ', ' + self.zipcode)
@@ -242,6 +245,8 @@ class MapPolygon(MapElement):
 	field2 = models.FloatField()
 
 	mpoly = models.MultiPolygonField(srid=4326)
+	#must be included in children too
+	objects = models.GeoManager()
 
 class DataField(models.Model):
 	dataset = models.ForeignKey(Dataset, related_name = 'dataFields')
