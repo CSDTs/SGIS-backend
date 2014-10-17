@@ -7,5 +7,4 @@ psycopg2>=2.5.3
 pycurl>=7.19.5
 setuptools>=3.6
 six>=1.7.3
-South>=1.0
 wsgiref>=0.1.2
