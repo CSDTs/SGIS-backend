@@ -6,7 +6,7 @@ from django.db.models import Q#, Count
 
 import json, urllib, pycurl, decimal
 
-BATCH_SIZE = 50000
+BATCH_SIZE = 20000
 
 class Dataset(models.Model):
 	name = models.CharField(max_length=200)
@@ -130,14 +130,15 @@ class Dataset(models.Model):
 						print '...deleted'
 						continue
 				new_point = MapPoint(dataset = self, lat=0,lon=0)
+				print fields
 				for field in fields:
 					temp = self.reach_field(item, fields[field]).strip()
 					if field in ['lat','lon']:
 						l = len(temp)
-						if l > 19 and temp[0] == '-':
-							temp = temp[:19]
-						elif l > 18:
+						if l > 18 and temp[0] == '-':
 							temp = temp[:18]
+						elif l > 17:
+							temp = temp[:17]
 						try:
 							temp = decimal.Decimal(temp)
 						except:
@@ -145,6 +146,7 @@ class Dataset(models.Model):
 					elif len(temp) > MapPoint._meta.get_field(field).max_length:
 						temp = temp[0:MapPoint._meta.get_field(field).max_length]
 					setattr(new_point, field, temp)
+				print '\t...done'
 				if try_geocoding:
 					r = new_point.geocode()
 					if r['status'] == 'OVER_QUERY_LIMIT':
@@ -184,7 +186,7 @@ class MapElement(models.Model):
 	dataset = models.ForeignKey(Dataset, blank=True, null=True)
 	remote_id = models.CharField(max_length=50, blank=True, null=True)
 	name = models.CharField(max_length=150)
-	point = models.PointField(blank=True,null=True)
+	point = models.PointField(srid=4326,blank=True,null=True)
 	
 	objects = models.GeoManager()
 
@@ -201,8 +203,8 @@ class MapElement(models.Model):
 	#node = name?
 
 class MapPoint(MapElement):
-	lat = models.DecimalField(max_digits=17, decimal_places=15)
-	lon = models.DecimalField(max_digits=17, decimal_places=15)
+	lat = models.DecimalField(max_digits=18, decimal_places=15)
+	lon = models.DecimalField(max_digits=18, decimal_places=15)
 	field1 = models.CharField(blank=True,max_length=200)
 	field2 = models.CharField(blank=True,max_length=200)
 	field3 = models.CharField(blank=True,max_length=200)
@@ -241,7 +243,7 @@ class MapPolygon(MapElement):
 	field1 = models.FloatField()
 	field2 = models.FloatField()
 
-	mpoly = models.MultiPolygonField()
+	mpoly = models.MultiPolygonField(srid=4326)
 
 class DataField(models.Model):
 	dataset = models.ForeignKey(Dataset, related_name = 'dataFields')
