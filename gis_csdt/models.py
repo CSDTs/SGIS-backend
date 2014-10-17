@@ -1,5 +1,4 @@
 from django.contrib.gis.db import models
-#from django.contrib.gis.db import models #may need to switch to this later
 from datetime import datetime
 from django.utils.timezone import utc
 from django.conf import settings
@@ -130,7 +129,7 @@ class Dataset(models.Model):
 							continue
 						print '...deleted'
 						continue
-				new_point = MapPoint(dataset = self)
+				new_point = MapPoint(dataset = self, lat=0,lon=0)
 				for field in fields:
 					temp = self.reach_field(item, fields[field]).strip()
 					if field in ['lat','lon']:
@@ -152,13 +151,12 @@ class Dataset(models.Model):
 						try_geocoding = False
 					else:
 						geocoded += 1
+				new_point.save()
 				try:
-					new_point.point = Point(new_point.lon, new_point.lat)
+					new_point.point = Point(float(new_point.lat), float(new_point.lon))
 					new_point.save()
 				except:
-					new_point.lat = decimal.Decimal("0")
-					new_point.lon = decimal.Decimal("0")
-					new_point.save()
+					pass
 				added += 1
 				if added >= BATCH_SIZE:
 					if try_geocoding:
@@ -184,7 +182,7 @@ class Dataset(models.Model):
 
 class MapElement(models.Model):
 	dataset = models.ForeignKey(Dataset, blank=True, null=True)
-	remote_id = models.CharField(max_length=50)
+	remote_id = models.CharField(max_length=50, blank=True, null=True)
 	name = models.CharField(max_length=150)
 	point = models.PointField(blank=True,null=True)
 	
@@ -194,9 +192,13 @@ class MapElement(models.Model):
 	def __unicode__(self):
 		return self.name
 
-	class Meta:
-		abstract = True
+	#class Meta:
+	#	abstract = True
 
+
+#class SensorReading(MapElement):
+	#time = DateTimeField()
+	#node = name?
 
 class MapPoint(MapElement):
 	lat = models.DecimalField(max_digits=17, decimal_places=15)
@@ -258,16 +260,13 @@ class DataField(models.Model):
 
 class DataElement(models.Model):
 	datafield = models.ForeignKey(DataField, related_name = 'dataElements')
-	mappoint = models.ForeignKey(MapPoint, null = True, blank = True)
-	mappolygon = models.ForeignKey(MapPolygon, null = True, blank = True)
+	mapelement = models.ForeignKey(MapElement)
 	int_data = models.IntegerField(blank=True, null=True)
 	float_data = models.FloatField(blank=True, null=True)
 	char_data = models.CharField(blank=True, null=True, max_length=200)
 
 	def __unicode__(self):
-		if self.mappolygon is None:
-			return '[' + self.datafield.field_en + '] for [' + self.mappoint.name + '], id:' + str(self.id) + ', datafield:' + str(self.datafield_id)
-		return '[' + self.datafield.field_en + '] for [' + self.mappolygon.name + '], id:' + str(self.id) + ', datafield:' + str(self.datafield_id)
+		return '[' + self.datafield.field_en + '] for [' + self.mapelement.name + '], id:' + str(self.id) + ', datafield:' + str(self.datafield_id)
 
 class Tag(models.Model):
 	dataset = models.ForeignKey(Dataset, related_name = 'tags')
@@ -284,24 +283,19 @@ class Tag(models.Model):
 			self.save()
 
 	def recount(self, save=True):
-		self.count = TagIndiv.objects.filter(Q(tag=self), Q(mappoint__dataset_id=self.dataset_id) | Q(mappolygon__dataset_id=self.dataset_id)).count()
+		self.count = TagIndiv.objects.filter(tag=self).filter(mapelement__dataset_id=self.dataset_id).count()
 		if save:
 			self.save()
 
 class TagIndiv(models.Model):
 	tag = models.ForeignKey(Tag)
-	mappoint = models.ForeignKey(MapPoint, null = True, blank = True)
-	mappolygon = models.ForeignKey(MapPolygon, null = True, blank = True)
+	mapelement = models.ForeignKey(MapElement)
 
 	def __unicode__(self):
-		if self.mappoint != '' and self.mappoint is not None:
-	 		return self.mappoint.name + ' tagged as "' + self.tag.tag + '"'
-	 	elif self.mappolygon != '' and self.mappolygon is not None:
-	 		return self.mappoint.name + ' tagged as "' + self.tag.tag + '"'
- 		return '<NULL> tagged as "' + self.tag.tag + '"'
+		return self.mapelementt.name + ' tagged as "' + self.tag.tag + '"'
  		
  	class Meta:
- 		unique_together = (("tag", "mappoint"), ("tag", "mappolygon"))
+ 		unique_together = (("tag", "mapelement"),)
 
 ''' 	def save(self, *args, **kwargs):
  		exists = self.id is not null

@@ -5,17 +5,17 @@ from django.shortcuts import render
 from rest_framework import views, viewsets, permissions, response, pagination
 from django.contrib.gis.geos import Polygon, Point
 from gis_csdt.models import Dataset, MapPoint, Tag, MapPolygon, TagIndiv, DataField, DataElement
-from gis_csdt.serializers import TagCountSerializer, DatasetSerializer, MapPointSerializer, NewTagSerializer, TagSerializer, NewTagSerializer, MapPolygonSerializer #, CountPointsInPolygonSerializer
+from gis_csdt.serializers import TagCountSerializer, DatasetSerializer, MapPointSerializer, NewTagSerializer, MapPolygonSerializer #, CountPointsInPolygonSerializer
 from django.core.paginator import Paginator
 from django.contrib.gis.measure import Distance, Area
 
 
-class TagViewSet(viewsets.ModelViewSet):
+'''class TagViewSet(viewsets.ModelViewSet):
     queryset = TagIndiv.objects.filter(tag__approved=True).distinct('tag')
     serializer_class = TagSerializer
 
     #http://www.django-rest-framework.org/api-guide/permissions
-    permission_classes = (permissions.AllowAny,)#(permissions.IsAuthenticatedOrReadOnly)
+    permission_classes = (permissions.AllowAny,)#(permissions.IsAuthenticatedOrReadOnly)'''
 
 class NewTagViewSet(viewsets.ModelViewSet):
     queryset = TagIndiv.objects.filter(tag__approved=True).distinct('tag')

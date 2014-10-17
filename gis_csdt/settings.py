@@ -127,6 +127,7 @@ INSTALLED_APPS = (
     'django_extensions',
     'django.contrib.gis',
     'gis_csdt',
+    'south',
 )
 
 # A sample logging configuration. The only tangible logging

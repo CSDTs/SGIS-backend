@@ -9,6 +9,7 @@ from django.utils.timezone import utc
 from django.conf import settings
 from django.contrib.gis.geos import Polygon, Point
 from django.db import connection
+from django.db.models import Max
 
 def run(verbose=True, year=2010, starting_state=1):
 
@@ -18,17 +19,23 @@ def run(verbose=True, year=2010, starting_state=1):
         yn = raw_input('This process can be memory-intensive if DEBUG = True in settings as this logs all SQL. Please set this to False if you are experiencing issues. Continue (y/n)?').lower().strip()
         if yn == 'n':
             return
-    ds = Dataset(name = str(year) + ' Census Tracts',
-        cached = datetime.utcnow().replace(tzinfo=utc),
-        cache_max_age = 1000,
-        remote_id_field = 'GEOID10',
-        name_field = 'NAMELSAD10',
-        lat_field = 'INTPTLAT10',
-        lon_field = 'INTPTLON10',
-        field1_en = 'Land Area',
-        field1_name = 'ALAND10',
-        field2_en = 'Water Area',
-        field2_name = 'AWATER10')
+    dataset_qs = Dataset.objects.filter(name__exact=str(year) + ' Census Tracts')
+    if len(dataset_qs) > 0:
+        ds = dataset_qs[0]
+        ds.cached = datetime.utcnow().replace(tzinfo=utc),
+    else:
+        ds = Dataset(name = str(year) + ' Census Tracts',
+            cached = datetime.utcnow().replace(tzinfo=utc),
+            cache_max_age = 1000,
+            remote_id_field = 'GEOID10',
+            name_field = 'NAMELSAD10',
+            lat_field = 'INTPTLAT10',
+            lon_field = 'INTPTLON10',
+            field1_en = 'Land Area',
+            field1_name = 'ALAND10',
+            field2_en = 'Water Area',
+            field2_name = 'AWATER10')
+        ds.save()
 
 
     tract_mapping = {
@@ -45,6 +52,17 @@ def run(verbose=True, year=2010, starting_state=1):
     ftp.login()
     ftp.cwd("/geo/tiger/TIGER2010/TRACT/"+str(year)+"/")
     files = ftp.nlst()
+
+    MapPolygon.objects.filter(dataset_id__isnull=True).delete()
+    max_state = MapPolygon.objects.filter(dataset_id__exact=ds.id).aggregate(Max('remote_id'))
+    max_state = max_state['remote_id__max']
+    if max_state is not None:
+        try:
+            max_state = int(max_state)/1000000000
+            if max_state >= starting_state:
+                starting_state = max_state + 1
+        except:
+            pass
 
     for i in [format(x,'#02d') for x in range(starting_state,100)]:
         short_name = 'tl_'+str(year)+'_'+i+'_tract10'
@@ -75,7 +93,7 @@ def run(verbose=True, year=2010, starting_state=1):
 
         while True:
             try:
-                lm.save(strict=True, verbose=verbose)
+                lm.save(strict=True, verbose=False)#verbose)
                 break
             #exception part is untested, error didn't happen again
             except Exception as inst:
@@ -88,14 +106,13 @@ def run(verbose=True, year=2010, starting_state=1):
                     break
         if verbose:
             print '\tLayer mapping done.'
+        MapPolygon.objects.filter(dataset = None).update(dataset = ds)
+        if verbose:
+            print '\tLayer associated with dataset.'
     ftp.quit()
-    ds.save()
 
     if verbose:
         print 'All shapefiles added.'
-    MapPolygon.objects.filter(dataset = None).update(dataset = ds)
-    if verbose:
-        print 'All geometires associated with the dataset object'
     
 '''def temp_switch():
     for poly in MapPolygon.objects.all():
@@ -179,7 +196,7 @@ def get_income(year = 2010, ds_id = 0):
             if poly.remote_id in converted:
                 for df in dfs:
                     if df.field_name in converted[poly.remote_id]:
-                        de = DataElement(datafield = df,mappolygon = poly)
+                        de = DataElement(datafield = df,mapelement = poly)
                         if df.field_type == DataField.INTEGER:
                             try:
                                 de.int_data = int(converted[poly.remote_id][df.field_name])

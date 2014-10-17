@@ -2,14 +2,14 @@ from gis_csdt.models import Dataset, MapPoint, Tag, TagIndiv, MapPolygon
 from rest_framework import serializers, exceptions 
 from rest_framework_gis import serializers as gis_serializers
 
-class TagSerializer(serializers.ModelSerializer):
+'''class TagSerializer(serializers.ModelSerializer):
     def __init__(self, *args, **kwargs):
         many = kwargs.pop('many', True)
         super(TagSerializer, self).__init__(many=many, *args, **kwargs)
 
     class Meta:
         model = TagIndiv
-        fields = ('mappoint','mappolygon','tag')
+        fields = ('mappoint','mappolygon','tag')'''
 
 class NewTagSerializer(serializers.ModelSerializer):
     mappoint = serializers.IntegerField(required=False)
@@ -31,7 +31,7 @@ class NewTagSerializer(serializers.ModelSerializer):
                 print attrs
                 raise exceptions.ParseError()
             try:
-                if 'mappoint' in attrs.keys():
+                if mappoint:
                     mp = MapPoint.objects.get(id=attrs['mappoint'])
                 else:
                     mp = MapPolygon.objects.get(id=attrs['mappolygon']) 
@@ -40,12 +40,7 @@ class NewTagSerializer(serializers.ModelSerializer):
             if ',' in attrs['tag']:
                 return None
             attrs['tag'] = attrs['tag'].strip().lower()
-            '''attrs['tag'] = attrs['tag'].split(',').strip().lower()
-            if type(attrs['tag']) is not list:
-                attrs['tag'] = [attrs['tag']]
-            for t in attrs['tag']:
-                if instance:
-                    instance.save()'''
+
             tags = Tag.objects.filter(dataset = mp.dataset, tag = attrs['tag'])
             len_tags = len(tags)
             if len_tags == 0:
@@ -59,11 +54,7 @@ class NewTagSerializer(serializers.ModelSerializer):
                     tag = approved_tags[0]
                 else:
                     tag = tags[0]
-            if 'mappoint' in attrs.keys():
-                instance = TagIndiv(mappoint = mp, tag = tag)  
-            else:
-                instance = TagIndiv(mappolygon = mp, tag = tag)  
-        return instance
+        return TagIndiv(mapelement = mp, tag = tag)
 
 class TagCountSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
@@ -87,7 +78,7 @@ class MapPointSerializer(serializers.HyperlinkedModelSerializer):
     tags = serializers.SerializerMethodField('get_tags')
     def get_tags(self, mappoint):
         #build nested distinct list
-        return Tag.objects.filter(approved=True, tagindiv__mappoint=mappoint).distinct('id','tag').values('id','tag')
+        return Tag.objects.filter(approved=True, tagindiv__mapelement=mappoint).distinct('id','tag').values('id','tag')
 
     class Meta:
         #id_field = False
@@ -102,7 +93,7 @@ class TestSerializer(gis_serializers.GeoFeatureModelSerializer):
     tags = serializers.SerializerMethodField('get_tags')
     def get_tags(self, mappoint):
         #build nested distinct list
-        return Tag.objects.filter(approved=True, tagindiv__mappoint=mappoint).distinct('id','tag').values('id','tag')
+        return Tag.objects.filter(approved=True, tagindiv__mapelement=mappoint).distinct('id','tag').values('id','tag')
 
     class Meta:
         id_field = False
@@ -119,7 +110,7 @@ class MapPolygonSerializer(gis_serializers.GeoFeatureModelSerializer):
 
     def get_tags(self, mappolygon):
         #build nested distinct list
-        return Tag.objects.filter(approved=True, tagindiv__mappolygon=mappolygon).distinct('id','tag').values('id','tag')
+        return Tag.objects.filter(approved=True, tagindiv__mapelement=mappolygon).distinct('id','tag').values('id','tag')
 
     #def get_mpoly(self, mappolygon):
      #   return mappolygon.mpoly
