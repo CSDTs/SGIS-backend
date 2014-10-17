@@ -130,7 +130,6 @@ class Dataset(models.Model):
 						print '...deleted'
 						continue
 				new_point = MapPoint(dataset = self, lat=0,lon=0)
-				print fields
 				for field in fields:
 					temp = self.reach_field(item, fields[field]).strip()
 					if field in ['lat','lon']:
@@ -146,7 +145,6 @@ class Dataset(models.Model):
 					elif len(temp) > MapPoint._meta.get_field(field).max_length:
 						temp = temp[0:MapPoint._meta.get_field(field).max_length]
 					setattr(new_point, field, temp)
-				print '\t...done'
 				if try_geocoding:
 					r = new_point.geocode()
 					if r['status'] == 'OVER_QUERY_LIMIT':
