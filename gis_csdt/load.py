@@ -8,15 +8,16 @@ from datetime import datetime
 from django.utils.timezone import utc
 from django.conf import settings
 from django.contrib.gis.geos import Polygon, Point
-from django.db import connection
+from django.db import connection, IntegrityError
 from django.db.models import Max
+from settings import DEBUG
 
 def run(verbose=True, year=2010, starting_state=1):
 
     yn = ''
     #https://docs.djangoproject.com/en/1.7/ref/contrib/gis/layermapping/
-    while yn != 'y':
-        yn = raw_input('This process can be memory-intensive if DEBUG = True in settings as this logs all SQL. Please set this to False if you are experiencing issues. Continue (y/n)?').lower().strip()
+    while DEBUG and yn != 'y':
+        yn = raw_input('This process can be memory-intensive if DEBUG = True in settings as this logs all SQL. DEBUG is currently True. Please set this to False if you are experiencing issues. Continue (y/n)?').lower().strip()
         if yn == 'n':
             return
     dataset_qs = Dataset.objects.filter(name__exact=str(year) + ' Census Tracts')
@@ -227,8 +228,6 @@ def tag_by_name(filename='fastfood.json', name_field='Company', dataset=2, tag='
     data = json.loads(open(os.path.abspath(os.path.join(os.path.dirname(__file__), 'data/'+filename))).read())
     data = data['data']
 
-    print data
-
     mps = MapPoint.objects.filter(dataset_id=dataset)
     tags = Tag.objects.filter(dataset_id=dataset).filter(tag=tag)
     if tags.count() > 1:
@@ -248,8 +247,12 @@ def tag_by_name(filename='fastfood.json', name_field='Company', dataset=2, tag='
         print name
         for mp in mps.filter(name__iregex=name):
             print mp.name
-            t = TagIndiv(tag = tag, mappoint = mp)
-            t.save()
+            t = TagIndiv(tag = tag, mapelement = mp)
+            try:
+                t.save()
+            except IntegrityError:
+                #violate unique restraint so just don't save it
+                pass
             
 
 def add_point_to_mp():
