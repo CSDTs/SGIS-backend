@@ -153,7 +153,7 @@ class Dataset(models.Model):
 						geocoded += 1
 				new_point.save()
 				try:
-					new_point.point = Point(float(new_point.lat), float(new_point.lon))
+					new_point.point = Point(float(new_point.lon), float(new_point.lat))
 					new_point.save()
 				except:
 					pass
@@ -297,7 +297,7 @@ class TagIndiv(models.Model):
 	mapelement = models.ForeignKey(MapElement)
 
 	def __unicode__(self):
-		return self.mapelementt.name + ' tagged as "' + self.tag.tag + '"'
+		return self.mapelement.name + ' tagged as "' + self.tag.tag + '"'
  		
  	class Meta:
  		unique_together = (("tag", "mapelement"),)
