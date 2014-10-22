@@ -255,11 +255,14 @@ def tag_by_name(filename='fastfood.json', name_field='Company', dataset=2, tag='
                 pass
             
 
-def add_point_to_mp():
+def add_point_to_mp(dataset=None):
     mps = MapPoint.objects.filter(point__isnull=True).exclude(lat__isnull=True).exclude(lon__isnull=True)
+    if dataset is not None:
+        mps = mps.filter(dataset_id__exact=dataset)
     for mp in mps:
         try:
             mp.point = Point(float(mp.lon),float(mp.lat))
             mp.save()
         except:
             pass
+
