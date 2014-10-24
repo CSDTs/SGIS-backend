@@ -4,18 +4,12 @@ from django.shortcuts import render
 #from django.contrib.auth.models import User, Group
 from rest_framework import views, viewsets, permissions, response, pagination
 from django.contrib.gis.geos import Polygon, Point
-from gis_csdt.models import Dataset, MapPoint, Tag, MapPolygon, TagIndiv, DataField, DataElement
-from gis_csdt.serializers import TagCountSerializer, DatasetSerializer, MapPointSerializer, NewTagSerializer, MapPolygonSerializer #, CountPointsInPolygonSerializer
+from gis_csdt.models import Dataset, MapElement, MapPoint, Tag, MapPolygon, TagIndiv, DataField, DataElement
+from gis_csdt.serializers import TagCountSerializer, DatasetSerializer, MapPointSerializer, NewTagSerializer, MapPolygonSerializer, CountPointsSerializer
+from gis_csdt.filter_tools import filter_request
 from django.core.paginator import Paginator
 from django.contrib.gis.measure import Distance, Area
 
-
-'''class TagViewSet(viewsets.ModelViewSet):
-    queryset = TagIndiv.objects.filter(tag__approved=True).distinct('tag')
-    serializer_class = TagSerializer
-
-    #http://www.django-rest-framework.org/api-guide/permissions
-    permission_classes = (permissions.AllowAny,)#(permissions.IsAuthenticatedOrReadOnly)'''
 
 class NewTagViewSet(viewsets.ModelViewSet):
     queryset = TagIndiv.objects.filter(tag__approved=True).distinct('tag')
@@ -40,345 +34,136 @@ class MapPointViewSet(viewsets.ReadOnlyModelViewSet):
     model = MapPoint
 
     def get_queryset(self):
-        t = False
-        radius = False
-        center = False
-        matchall = False
-        queryset = MapPoint.objects.none()
-
-        for (param, result) in self.request.QUERY_PARAMS.items():
-            if param in ['tag','tags']:
-                t = result
-            elif param == 'match' and result == 'all':
-                matchall = True
-        if t:
-            t = t.split(',')
-            if type(t) is not list:
-                t = [t]
-            if matchall:
-                queryset = MapPoint.objects
-                for tag in t:
-                    try:
-                        num = int(tag)
-                        queryset = queryset.filter(tagindiv__tag=num)
-                    except:
-                        queryset = queryset.filter(tagindiv__tag__tag=tag)
-            else:
-                for tag in t:
-                    try:
-                        num = int(tag)
-                        queryset = queryset | MapPoint.objects.filter(tagindiv__tag=num)
-                    except:
-                        queryset = queryset | MapPoint.objects.filter(tagindiv__tag__tag=tag)
-            queryset = queryset.filter(tagindiv__tag__approved=True)
-        else:
-            queryset = MapPoint.objects
-        bb = {}
-        for param, result in self.request.QUERY_PARAMS.items():
-            p = param.lower()
-            if p == 'dataset':
-                try:
-                    r = int(result)
-                    queryset = queryset.filter(dataset__id__exact = r)
-                except:
-                    queryset = queryset.filter(dataset__name__icontains = result.strip())
-            elif p in ['max_lat','min_lat','max_lon','min_lon']:
-                try:
-                    r = float(result)
-                    #for tolerance
-                    minr = r - 0.0000005
-                    maxr = r + 0.0000005 
-                except:
-                    continue
-                if p == 'max_lat' or p == 'lat':
-                    queryset = queryset.filter(lat__lte = maxr)
-                    bb['max_lat'] = maxr
-                if p == 'min_lat' or p == 'lat':
-                    queryset = queryset.filter(lat__gte = minr)
-                    bb['min_lat'] = minr
-                    continue
-                if p == 'max_lon' or p == 'lon':
-                    queryset = queryset.filter(lon__lte = maxr)
-                    bb['max_lon'] = maxr
-                if p == 'min_lon' or p == 'lon':
-                    queryset = queryset.filter(lon__gte = minr)
-                    bb['min_lon'] = minr
-            elif p == 'street':
-                queryset = queryset.filter(street__iexact = result)
-            elif p == 'city':
-                print result
-                queryset = queryset.filter(city__iexact = result)
-            elif p == 'state':
-                queryset = queryset.filter(state__iexact = result)
-            elif p == 'county':
-                queryset = queryset.filter(county__iexact = result)
-            elif p in ['zipcode','zip','zip_code']:
-                queryset = queryset.filter(zipcode__iexact = result)
-            elif param == 'radius':
-                try:
-                    radius = int(result)
-                except:
-                    return HttpResponseBadRequest('Invalid radius. Only integers accepted.' )
-            elif param == 'center':
-                temp = result.split(',')
-                try:
-                    if len(temp) != 2:
-                        raise 
-                    temp[0] = float(temp[0])
-                    temp[1] = float(temp[1])
-                    center = Point(temp[0],temp[1])
-                except:
-                    return HttpResponseBadRequest('Invalid center. Format is: center=lon,lat' )
-
-
-        if 'max_lat' in bb and 'min_lat' in bb and 'max_lon' in bb and 'min_lon' in bb:
-            geom = Polygon.from_bbox((bb['min_lon'],bb['min_lat'],bb['max_lon'],bb['max_lat']))
-            queryset = queryset.filter(point__within=geom)
-
-        if radius and center:
-            queryset = queryset.filter(point__distance_lte = (center,Distance(mi=radius)))
-        return queryset.distinct().all()
+        return filter_request(self.request.QUERY_PARAMS, 'mappoint')
 
 class MapPolygonViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = MapPolygonSerializer
     model = MapPolygon
 
     def get_queryset(self):
-        t = False
-        matchall = False
-        queryset = MapPolygon.objects.none()
+        return filter_request(self.request.QUERY_PARAMS, 'mappolygon')
 
-        for (param, result) in self.request.QUERY_PARAMS.items():
-            if param in ['tag','tags']:
-                t = result
-            elif param == 'match' and result == 'all':
-                matchall = True
-        if t:
-            t = t.split(',')
-            if type(t) is not list:
-                t = [t]
-            if matchall:
-                queryset = MapPolygon.objects
-                for tag in t:
-                    try:
-                        num = int(tag)
-                        queryset = queryset.filter(tagindiv__tag=num)
-                    except:
-                        queryset = queryset.filter(tagindiv__tag__tag=tag)
-            else:
-                for tag in t:
-                    try:
-                        num = int(tag)
-                        queryset = queryset | MapPolygon.objects.filter(tagindiv__tag=num)
-                    except:
-                        queryset = queryset | MapPolygon.objects.filter(tagindiv__tag__tag=tag)
-            queryset = queryset.filter(tagindiv__tag__approved=True)
-        else:
-            queryset = MapPolygon.objects
-        
-        bb = {}
-        for param, result in self.request.QUERY_PARAMS.items():
-            p = param.lower()
-            if p == 'dataset':
-                try:
-                    r = int(result)
-                    queryset = queryset.filter(dataset__id__exact = r)
-                except:
-                    queryset = queryset.filter(dataset__name__icontains = result)
-            elif p in ['max_lat','min_lat','max_lon','min_lon']:
-                try:
-                    r = float(result)
-                    bb[p] = r
-                except:
-                    continue
-        #define bounding box
-        if 'max_lat' in bb and 'min_lat' in bb and 'max_lon' in bb and 'min_lon' in bb:
-            geom = Polygon.from_bbox((bb['min_lon'],bb['min_lat'],bb['max_lon'],bb['max_lat']))
-            #print geom
-            queryset = queryset.filter(mpoly__bboverlaps=geom)
-            #print queryset.query
-        return queryset.distinct().all()
-
-class CountPointsInPolygonView(views.APIView):
-    #serializer_class = MapPolygonSerializer
-    #model = MapPolygon
+class CountPointsInPolygonView(viewsets.ReadOnlyModelViewSet):
+    serializer_class = CountPointsSerializer
+    model = MapPolygon
     permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
 
-    def get(self, request, format=None):
-        #serializer = CountPointsInPolygonSerializer
-        #get polygons
-        all_tags = ''
-        matchall = False
-        polygons = MapPolygon.objects
-        dataset_ids = []
-        state = ''
+    def get_queryset(self, format=None):
+        use_csv = format and format == 'csv'
 
-        bb = {}
-        use_csv = False
-        for param, result in request.QUERY_PARAMS.items():
-            p = param.lower()
-            if p == 'dataset':
-                for res in result.split(','):
-                    try:
-                        r = int(result)
-                        dataset_ids.append(r)
-                    except:
-                        for d in Dataset.objects.filter(name__icontains = result):
-                            dataset_ids.append(d.id)
-                polygons = polygons.filter(dataset__id__in = dataset_ids)
+        #split params by which it applies to
+        mappolygon_params = {}
+        for (param, result) in self.request.QUERY_PARAMS.items():
+            if param in ['max_lat','min_lat','max_lon','min_lon']:
+                mappolygon_params[param] = result
+            elif param == 'poly_dataset':
+                mappolygon_params['dataset'] = result
+            '''elif param in ['dataset','tag','tags','match']:
+                mappoint_params[param] = result'''
+        #now get the querysets
+        polygons = filter_request(mappolygon_params,'mappolygon')
+        if 'state' in self.request.QUERY_PARAMS:
+            polygons = polygons.filter(remote_id__startswith=self.request.QUERY_PARAMS['state'])
+        return polygons
 
-            elif p in ['max_lat','min_lat','max_lon','min_lon']:
-                try:
-                    r = float(result)
-                    bb[p] = r
-                except:
-                    continue
-            elif p == 'file' and result.lower() == 'csv':
-                use_csv = True
-            elif p =='state':
-                state = result
-            print p, result, use_csv
-        #define bounding box
-        if 'max_lat' in bb and 'min_lat' in bb and 'max_lon' in bb and 'min_lon' in bb:
-            geom = Polygon.from_bbox((bb['min_lon'],bb['min_lat'],bb['max_lon'],bb['max_lat']))
-            #print geom
-            polygons = polygons.filter(mpoly__bboverlaps=geom)
-            #print polygons.query
-        
-        if len(dataset_ids) == 0:
-            dataset_ids = [d.id for d in Dataset.objects.all()]
-
-        points = MapPoint.objects.none()
-
-        for (param, result) in request.QUERY_PARAMS.items():
-            if param in ['tag','tags']:
-                all_tags = all_tags + result + ','
-            elif param == 'match' and result == 'all':
-                matchall = True
-        if all_tags == '':
-            for t in Tag.objects.filter(dataset__in = dataset_ids):
-                all_tags = all_tags + t.tag + ','
-            tags = all_tags.strip(' ,').split(',')
-            points = MapPoint.objects
-        else:
-            tags = all_tags.strip(' ,').split(',')
-            if type(tags) is not list:
-                tags = [tags]
-            if matchall:
-                points = MapPoint.objects
-                for tag in tags:
-                    try:
-                        num = int(tag)
-                        points = points.filter(tagindiv__tag=num)
-                    except:
-                        points = points.filter(tagindiv__tag__tag=tag)
-            else:
-                for tag in tags:
-                    try:
-                        num = int(tag)
-                        points = points | MapPoint.objects.filter(tagindiv__tag=num)
-                    except:
-                        points = points | MapPoint.objects.filter(tagindiv__tag__tag=tag)
-            points = points.filter(tagindiv__tag__approved=True)
-
-        
-        datafields = DataField.objects.all()
-        points = points.distinct()
-        if state != '':
-            polygons = polygons.filter(remote_id__startswith=state)
-        polygons = polygons.distinct()
-        count = []
-        mult_tags = len(tags) > 1
-
-        if use_csv:
-            csv_response = HttpResponse(content_type='text/csv')
-            filename = 'census_tract_stats'
-            for t in tags:
-                filename = filename + '_' + t
-            csv_response['Content-Disposition'] = 'attachment; filename="' + filename + '.csv"'
-            writer = csv.writer(csv_response)
-
-            firstrow = ['polygon_id', polygons[0].dataset.field1_en, polygons[0].dataset.field2_en]
-            for tag in tags:
-                try:
-                    num = int(tag)
-                    t = Tag.objects.get(pk = num)
-                    t = t.tag
-                except:
-                    t = tag
-                firstrow.append(t + " count")
-            if mult_tags:
-                if not matchall:
-                    firstrow.append(all_tags + " count (match any)")
-                firstrow.append(all_tags + " count (match all)")
-            for df in datafields:
-                firstrow.append(df.field_en)
-            writer.writerow(firstrow)
-
-        for poly in polygons:
-            if use_csv:
-                row = [poly.remote_id, poly.field1, poly.field2]
-            else:
-                d = {"polygon_id": poly.remote_id, poly.dataset.field1_en : poly.field1, poly.dataset.field2_en : poly.field2}
-
-            #counts in polygons
-            all_tag_filter = points
-            if not matchall:
-                for tag in tags:
-                    try:
-                        num = int(tag)
-                        temp = points.filter(tagindiv__tag=num)
-                        all_tag_filter = points.filter(tagindiv__tag=num)
-                    except:
-                        temp = points.filter(tagindiv__tag__tag=tag)
-                        all_tag_filter = points.filter(tagindiv__tag__tag=tag)
-                    if use_csv:
-                        row.append(temp.filter(point__intersects = poly.mpoly).count())
-                    else:
-                        d[tag + " count"] = temp.filter(point__intersects = poly.mpoly).count()
-                print points.filter(point__intersects = poly.mpoly).query
-                if mult_tags:
-                    if use_csv:
-                        row.append(points.filter(point__intersects = poly.mpoly).count())
-                    else:
-                        d[all_tags + " count (match any)"] = points.filter(point__intersects = poly.mpoly).count()
-            if mult_tags:
-                if use_csv:
-                    row.append(all_tag_filter.filter(point__intersects = poly.mpoly).count())
-                else:
-                    d[all_tags + " count (match all)"] = all_tag_filter.filter(point__intersects = poly.mpoly).count()
-
-            #get other data
-            for df in datafields:
-                data = None
-                if df.field_type == DataField.INTEGER:
-                    element = DataElement.objects.filter(datafield = df).filter(mapelement=poly)
-                    if element:
-                        data = element[0].int_data
-                elif df.field_type == DataField.FLOAT:
-                    element = DataElement.objects.filter(datafield = df).filter(mapelement=poly)
-                    if element:
-                        data = element[0].float_data
-                else:
-                    element = DataElement.objects.filter(datafield = df).filter(mapelement=poly)
-                    if element:
-                        data = element[0].char_data
-                if use_csv:
-                    if data:
-                        row.append(data)
-                    else:
-                        row.append('')
-                else:
-                    d[df.field_en] = data
-            if use_csv:
-                writer.writerow(row)
-            else:
-                count.append(d)
-        if use_csv:
-            return csv_response
-        #paginator = Paginator(count,5)
-        #serializer = pagination.PaginationSerializer(instance = paginator)
-        return response.Response(count)
+        '''points = filter_request(mappoint_params,'mappoint')
+                                if len(dataset_ids) == 0:
+                                    dataset_ids = [d.id for d in Dataset.objects.all()]
+                        
+                        
+                                datafields = DataField.objects.all()
+                                count = []
+                                mult_tags = len(tags) > 1
+                        
+                                if use_csv:
+                                    csv_response = HttpResponse(content_type='text/csv')
+                                    filename = 'census_tract_stats'
+                                    for t in tags:
+                                        filename = filename + '_' + t
+                                    csv_response['Content-Disposition'] = 'attachment; filename="' + filename + '.csv"'
+                                    writer = csv.writer(csv_response)
+                        
+                                    firstrow = ['polygon_id', polygons[0].dataset.field1_en, polygons[0].dataset.field2_en]
+                                    for tag in tags:
+                                        try:
+                                            num = int(tag)
+                                            t = Tag.objects.get(pk = num)
+                                            t = t.tag
+                                        except:
+                                            t = tag
+                                        firstrow.append(t + " count")
+                                    if mult_tags:
+                                        if not matchall:
+                                            firstrow.append(all_tags + " count (match any)")
+                                        firstrow.append(all_tags + " count (match all)")
+                                    for df in datafields:
+                                        firstrow.append(df.field_en)
+                                    writer.writerow(firstrow)
+                        
+                                for poly in polygons:
+                                    if use_csv:
+                                        row = [poly.remote_id, poly.field1, poly.field2]
+                                    else:
+                                        d = {"polygon_id": poly.remote_id, poly.dataset.field1_en : poly.field1, poly.dataset.field2_en : poly.field2}
+                        
+                                    #counts in polygons
+                                    all_tag_filter = points
+                                    if not matchall:
+                                        for tag in tags:
+                                            try:
+                                                num = int(tag)
+                                                temp = points.filter(tagindiv__tag=num)
+                                                all_tag_filter = points.filter(tagindiv__tag=num)
+                                            except:
+                                                temp = points.filter(tagindiv__tag__tag=tag)
+                                                all_tag_filter = points.filter(tagindiv__tag__tag=tag)
+                                            if use_csv:
+                                                row.append(temp.filter(point__intersects = poly.mpoly).count())
+                                            else:
+                                                d[tag + " count"] = temp.filter(point__intersects = poly.mpoly).count()
+                                        print points.filter(point__intersects = poly.mpoly).query
+                                        if mult_tags:
+                                            if use_csv:
+                                                row.append(points.filter(point__intersects = poly.mpoly).count())
+                                            else:
+                                                d[all_tags + " count (match any)"] = points.filter(point__intersects = poly.mpoly).count()
+                                    if mult_tags:
+                                        if use_csv:
+                                            row.append(all_tag_filter.filter(point__intersects = poly.mpoly).count())
+                                        else:
+                                            d[all_tags + " count (match all)"] = all_tag_filter.filter(point__intersects = poly.mpoly).count()
+                        
+                                    #get other data
+                                    for df in datafields:
+                                        data = None
+                                        if df.field_type == DataField.INTEGER:
+                                            element = DataElement.objects.filter(datafield = df).filter(mapelement=poly)
+                                            if element:
+                                                data = element[0].int_data
+                                        elif df.field_type == DataField.FLOAT:
+                                            element = DataElement.objects.filter(datafield = df).filter(mapelement=poly)
+                                            if element:
+                                                data = element[0].float_data
+                                        else:
+                                            element = DataElement.objects.filter(datafield = df).filter(mapelement=poly)
+                                            if element:
+                                                data = element[0].char_data
+                                        if use_csv:
+                                            if data:
+                                                row.append(data)
+                                            else:
+                                                row.append('')
+                                        else:
+                                            d[df.field_en] = data
+                                    if use_csv:
+                                        writer.writerow(row)
+                                    else:
+                                        count.append(d)
+                                if use_csv:
+                                    return csv_response
+                                #paginator = Paginator(count,5)
+                                #serializer = pagination.PaginationSerializer(instance = paginator)
+                                return response.Response(count)'''
 
 
 import csv
@@ -534,9 +319,6 @@ def AnalyzeAreaAroundPointView(request):
             writer.writerow(row)
 
     return response
-##doesn't belong in views
-def findCensusTracts():
-    pass
 
 
 
@@ -547,102 +329,5 @@ class TestView(viewsets.ReadOnlyModelViewSet):
     serializer_class = TestSerializer
     model = MapPoint
 
-    def get_queryset(self):
-        t = False
-        radius = False
-        center = False
-        matchall = False
-        queryset = MapPoint.objects.none()
-
-        for (param, result) in self.request.QUERY_PARAMS.items():
-            if param in ['tag','tags']:
-                t = result
-            elif param == 'match' and result == 'all':
-                matchall = True
-        if t:
-            t = t.split(',')
-            if type(t) is not list:
-                t = [t]
-            if matchall:
-                queryset = MapPoint.objects
-                for tag in t:
-                    try:
-                        num = int(tag)
-                        queryset = queryset.filter(tagindiv__tag=num)
-                    except:
-                        queryset = queryset.filter(tagindiv__tag__tag=tag)
-            else:
-                for tag in t:
-                    try:
-                        num = int(tag)
-                        queryset = queryset | MapPoint.objects.filter(tagindiv__tag=num)
-                    except:
-                        queryset = queryset | MapPoint.objects.filter(tagindiv__tag__tag=tag)
-            queryset = queryset.filter(tagindiv__tag__approved=True)
-        else:
-            queryset = MapPoint.objects
-        bb = {}
-        for param, result in self.request.QUERY_PARAMS.items():
-            p = param.lower()
-            if p == 'dataset':
-                try:
-                    r = int(result)
-                    queryset = queryset.filter(dataset__id__exact = r)
-                except:
-                    queryset = queryset.filter(dataset__name__icontains = result.strip())
-            elif p in ['max_lat','min_lat','max_lon','min_lon']:
-                try:
-                    r = float(result)
-                    #for tolerance
-                    minr = r - 0.0000005
-                    maxr = r + 0.0000005 
-                except:
-                    continue
-                if p == 'max_lat' or p == 'lat':
-                    queryset = queryset.filter(lat__lte = maxr)
-                    bb['max_lat'] = maxr
-                if p == 'min_lat' or p == 'lat':
-                    queryset = queryset.filter(lat__gte = minr)
-                    bb['min_lat'] = minr
-                    continue
-                if p == 'max_lon' or p == 'lon':
-                    queryset = queryset.filter(lon__lte = maxr)
-                    bb['max_lon'] = maxr
-                if p == 'min_lon' or p == 'lon':
-                    queryset = queryset.filter(lon__gte = minr)
-                    bb['min_lon'] = minr
-            elif p == 'street':
-                queryset = queryset.filter(street__iexact = result)
-            elif p == 'city':
-                print result
-                queryset = queryset.filter(city__iexact = result)
-            elif p == 'state':
-                queryset = queryset.filter(state__iexact = result)
-            elif p == 'county':
-                queryset = queryset.filter(county__iexact = result)
-            elif p in ['zipcode','zip','zip_code']:
-                queryset = queryset.filter(zipcode__iexact = result)
-            elif param == 'radius':
-                try:
-                    radius = int(result)
-                except:
-                    return HttpResponseBadRequest('Invalid radius. Only integers accepted.' )
-            elif param == 'center':
-                temp = result.split(',')
-                try:
-                    if len(temp) != 2:
-                        raise 
-                    temp[0] = float(temp[0])
-                    temp[1] = float(temp[1])
-                    center = Point(temp[0],temp[1])
-                except:
-                    return HttpResponseBadRequest('Invalid center. Format is: center=lon,lat' )
-
-
-        if 'max_lat' in bb and 'min_lat' in bb and 'max_lon' in bb and 'min_lon' in bb:
-            geom = Polygon.from_bbox((bb['min_lon'],bb['min_lat'],bb['max_lon'],bb['max_lat']))
-            queryset = queryset.filter(point__within=geom)
-
-        if radius and center:
-            queryset = queryset.filter(point__distance_lte = (center,Distance(mi=radius)))
-        return queryset.distinct().all()
+    def get_queryset(self):\
+        return filter_request(self.request.QUERY_PARAMS, 'mappoint')

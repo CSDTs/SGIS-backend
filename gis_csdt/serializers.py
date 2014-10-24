@@ -1,6 +1,9 @@
-from gis_csdt.models import Dataset, MapPoint, Tag, TagIndiv, MapPolygon
+from gis_csdt.models import Dataset, MapPoint, Tag, TagIndiv, MapPolygon, DataField, DataElement
+from gis_csdt.filter_tools import filter_request
 from rest_framework import serializers, exceptions 
 from rest_framework_gis import serializers as gis_serializers
+import copy
+
 
 '''class TagSerializer(serializers.ModelSerializer):
     def __init__(self, *args, **kwargs):
@@ -72,8 +75,16 @@ class DatasetSerializer(serializers.ModelSerializer):
         fields = ('id','name','cached','field1_en','field2_en','field3_en', 'tags')
 
 class MapPointSerializer(serializers.HyperlinkedModelSerializer):
-    latitude = serializers.DecimalField(source = 'lat')
-    longitude = serializers.DecimalField(source = 'lon')
+    latitude = serializers.DecimalField(source = 'mappoint.lat')
+    longitude = serializers.DecimalField(source = 'mappoint.lon')
+    street = serializers.CharField(source = 'mappoint.street')
+    city = serializers.CharField(source = 'mappoint.city')
+    state = serializers.CharField(source = 'mappoint.state')
+    zipcode = serializers.CharField(source = 'mappoint.zipcode')
+    county = serializers.CharField(source = 'mappoint.county')
+    field1 = serializers.CharField(source = 'mappoint.field1')
+    field2 = serializers.CharField(source = 'mappoint.field2')
+    field3 = serializers.CharField(source = 'mappoint.field3')
 
     tags = serializers.SerializerMethodField('get_tags')
     def get_tags(self, mappoint):
@@ -87,8 +98,16 @@ class MapPointSerializer(serializers.HyperlinkedModelSerializer):
         fields = ('dataset','id','name','latitude','longitude','street','city','state','zipcode','county','field1','field2','field3','tags')
 
 class TestSerializer(gis_serializers.GeoFeatureModelSerializer):
-    latitude = serializers.DecimalField(source = 'lat')
-    longitude = serializers.DecimalField(source = 'lon')
+    latitude = serializers.DecimalField(source = 'mappoint.lat')
+    longitude = serializers.DecimalField(source = 'mappoint.lon')
+    street = serializers.CharField(source = 'mappoint.street')
+    city = serializers.CharField(source = 'mappoint.city')
+    state = serializers.CharField(source = 'mappoint.state')
+    zipcode = serializers.CharField(source = 'mappoint.zipcode')
+    county = serializers.CharField(source = 'mappoint.county')
+    field1 = serializers.CharField(source = 'mappoint.field1')
+    field2 = serializers.CharField(source = 'mappoint.field2')
+    field3 = serializers.CharField(source = 'mappoint.field3')
 
     tags = serializers.SerializerMethodField('get_tags')
     def get_tags(self, mappoint):
@@ -102,18 +121,18 @@ class TestSerializer(gis_serializers.GeoFeatureModelSerializer):
         fields = ('dataset','id','name','latitude','longitude','street','city','state','zipcode','county','field1','field2','field3','tags')
 
 class MapPolygonSerializer(gis_serializers.GeoFeatureModelSerializer):
-    latitude = serializers.DecimalField(source = 'lat')
-    longitude = serializers.DecimalField(source = 'lon')
+    latitude = serializers.DecimalField(source = 'mappolygon.lat')
+    longitude = serializers.DecimalField(source = 'mappolygon.lon')
+    field1 = serializers.CharField(source = 'mappolygon.field1')
+    field2 = serializers.CharField(source = 'mappolygon.field2')
     
+    mpoly = gis_serializers.GeometryField(source = 'mappolygon.mpoly')
+
     tags = serializers.SerializerMethodField('get_tags')
-   # geometry = serializers.SerializerMethodField('get_mpoly')
 
     def get_tags(self, mappolygon):
         #build nested distinct list
         return Tag.objects.filter(approved=True, tagindiv__mapelement=mappolygon).distinct('id','tag').values('id','tag')
-
-    #def get_mpoly(self, mappolygon):
-     #   return mappolygon.mpoly
 
     class Meta:
         id_field = False
@@ -121,10 +140,76 @@ class MapPolygonSerializer(gis_serializers.GeoFeatureModelSerializer):
         model = MapPolygon 
         fields = ('id','dataset','remote_id','name','latitude','longitude','field1','field2','tags')
 
-#class MapElementSerializer(gis_serializers.GeoModelSerializer):
-'''class CountPointsInPolygonSerializer():
-    polygon_id = serializers.IntegerField()
-    count = serializers.IntegerField()
+class CountPointsSerializer(serializers.ModelSerializer):
+    polygon_id = serializers.IntegerField(source = 'remote_id')
+    count = serializers.SerializerMethodField('count_points')
 
+    def count_points(self, mappolygon):
+        request = self.context.get('request', None)
+        params = copy.deepcopy(request.QUERY_PARAMS)
+        for key in ['max_lat','min_lat','max_lon','min_lon','state']:
+            try:
+                del params[key]
+            except:
+                pass #no big deal
+
+        c = {mappolygon.dataset.field1_en : mappolygon.mappolygon.field1, mappolygon.dataset.field2_en : mappolygon.mappolygon.field2}
+
+        datafields = DataField.objects.filter(dataset=mappolygon.dataset)
+        #get other data
+        for df in datafields:
+            data = None
+            if df.field_type == DataField.INTEGER:
+                element = DataElement.objects.filter(datafield = df).filter(mapelement=mappolygon)
+                if element:
+                    data = element[0].int_data
+            elif df.field_type == DataField.FLOAT:
+                element = DataElement.objects.filter(datafield = df).filter(mapelement=mappolygon)
+                if element:
+                    data = element[0].float_data
+            else:
+                element = DataElement.objects.filter(datafield = df).filter(mapelement=mappolygon)
+                if element:
+                    data = element[0].char_data
+            if data:
+                c[df.field_en] = data
+
+
+        
+        points = filter_request(params,'mappoint').filter(point__intersects=mappolygon.mappolygon.mpoly)
+        all_tags = None
+        if 'tag' in params:
+            all_tags = params['tag']
+        elif 'tags' in params:
+            all_tags = params['tags']
+        if all_tags:
+            tags = all_tags.split(',')
+            if type(tags) is not list:
+                tags = [tags]
+            all_tags = all_tags.replace(',',', ')
+        else:
+            tags = []
+
+        #counts in polygons
+        if 'match' not in params or params['match'] != 'all':
+            all_tag_filter = points
+            for tag in tags:
+                try:
+                    num = int(tag)
+                    tag_obj = Tag.objects.get(num)
+                    all_tag_filter = all_tag_filter.filter(tagindiv__tag=tag_obj)
+                    c[tag_obj.tag + " count"] = points.filter(tagindiv__tag=tag_obj).count()
+                except:
+                    all_tag_filter = all_tag_filter.filter(tagindiv__tag__tag=tag)
+                    c[tag + " count"] = points.filter(tagindiv__tag__tag=tag).count()
+            if len(tags) > 1:
+                c[all_tags + " count (match any)"] = points.count()
+                c[all_tags + " count (match all)"] = points.count()
+        if len(tags) > 1:
+            c[all_tags + " count (match all)"] = points.count()
+
+        return c
+    
     class Meta:
-        fields = ('polygon_id','count')'''
+        model = MapPolygon
+        fields = ('polygon_id','count')
