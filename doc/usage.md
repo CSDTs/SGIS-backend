@@ -68,7 +68,7 @@ MapPolygons can be filtered using similar parameters to MapPoints:
 - ```tag```, ```tags``` These can be used interchangably. Accepts a tag, a tag id number, a list of tags or a list of tag ids. By default, MapPolygons that match *any* of the tags will be included in the results (OR Boolean result).
 - ```match``` If this parameter is ```all```, only MapPolygons matching *all* of the tags will be included (AND Boolean result)
 - ```dataset``` Using the Dataset id, return only those MapPolygons matching a specific Dataset.
-- ```max_lat```, ```min_lat```, ```max_lon```,```min_lon``` Create a bounding box and return only MapPolygons at leasst partially within that box.
+- ```max_lat```, ```min_lat```, ```max_lon```,```min_lon``` Create a bounding box and return only MapPolygons at least partially within that box.
 
 ###Tags
 GET and POST are allowed for this URL, but GET is only intended to be used for debugging purposes. This URL is for linking an existing tag with an existing approved MapPoint *or* MapPolygon. A POST request with a defined MapPoint and a defined MapPolygon will fail. A POST request with neither will also fail.
