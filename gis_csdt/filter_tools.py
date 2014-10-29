@@ -77,14 +77,14 @@ def filter_request(parameters, model_type):
             except:
                 return HttpResponseBadRequest('Invalid radius. Only integers accepted.' )
                 continue
-            bb[p] = r
+            bb[key] = r
 
     if 'max_lat' in bb and 'min_lat' in bb and 'max_lon' in bb and 'min_lon' in bb:
         geom = Polygon.from_bbox((bb['min_lon'],bb['min_lat'],bb['max_lon'],bb['max_lat']))
         if model_type == 'mappoint':
             queryset = queryset.filter(point__within=geom)
         elif model_type == 'mappolygon':
-            queryset = queryset.filter(mpoly__bboverlaps=geom)
+            queryset = queryset.filter(mappolygon__mpoly__bboverlaps=geom)
 
     if 'radius' in parameters and 'center' in parameters:
         try:
