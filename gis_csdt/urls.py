@@ -1,6 +1,6 @@
 from django.conf.urls import patterns, include, url
 from rest_framework import routers
-from gis_csdt import views
+from gis_csdt import views,vtemplates
 from django.contrib import admin
 admin.autodiscover()
 
@@ -20,4 +20,6 @@ urlpatterns = patterns('',
     url(r'^api-auth/', include('rest_framework.urls', namespace='rest_framework')),
     #url(r'^api-count/', views.CountPointsInPolygonView.as_view(), name='count'),
     url(r'^api-dist/', views.AnalyzeAreaAroundPointView, name='distance'),
+    url(r'^around-point/(?P<mappoint_id>[0-9]+)/$', templates.AroundPointView),
+    url(r'^around-point/$', templates.AroundPointView),
 )
