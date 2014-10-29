@@ -1,6 +1,6 @@
 from django.conf.urls import patterns, include, url
 from rest_framework import routers
-from gis_csdt import views,vtemplates
+from gis_csdt import views, templates
 from django.contrib import admin
 admin.autodiscover()
 
