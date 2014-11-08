@@ -1,8 +1,15 @@
 from gis_csdt.models import Dataset, MapPoint, Tag, TagIndiv, MapPolygon, DataField, DataElement
 from gis_csdt.filter_tools import filter_request
+from gis_csdt.geometry_tools import circle_as_polygon
 from rest_framework import serializers, exceptions
 from rest_framework_gis import serializers as gis_serializers
+from django.contrib.gis.measure import Distance, Area
+from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import Sum, Count
+from django.http import HttpResponse, HttpRequest, HttpResponseBadRequest, HttpResponseNotAllowed
 import copy
+
+CIRCLE_EDGES = 12 #number of edges on polygon estimation of a circle
 
 '''class TagSerializer(serializers.ModelSerializer):
     def __init__(self, *args, **kwargs):
@@ -14,13 +21,28 @@ import copy
         fields = ('mappoint','mappolygon','tag')'''
 
 class NewTagSerializer(serializers.ModelSerializer):
-    mappoint = serializers.IntegerField(required=False)
-    mappolygon = serializers.IntegerField(required=False)
+    #mappoint = serializers.IntegerField(required=False, source='mapelement.mappoint.mapelement_ptr') 
+    mappoint = serializers.SerializerMethodField('get_mappoint')
+    #mappolygon = serializers.IntegerField(required=False, source='mapelement.mappolygon.mapelement_ptr') 
+    mappolygon = serializers.SerializerMethodField('get_mappolygon')
     tag = serializers.CharField()
 
     class Meta:
         model = TagIndiv
         fields = ('mappoint','mappolygon','tag')
+
+    def get_mappoint(self, mp):
+        try:
+            mp.mapelement.mappoint
+            return mp.mapelement_id
+        except ObjectDoesNotExist:
+            return None
+    def get_mappolygon(self, mp):
+        try:
+            mp.mapelement.mappolygon
+            return mp.mapelement_id
+        except ObjectDoesNotExist:
+            return None
 
     def restore_object(self, attrs, instance=None):
         #only react to a post
@@ -28,15 +50,20 @@ class NewTagSerializer(serializers.ModelSerializer):
             #find the mappoint
             mappoint = 'mappoint' in attrs.keys() and attrs['mappoint']!='' and attrs['mappoint'] is not None
             mappolygon = 'mappolygon' in attrs.keys() and attrs['mappolygon']!='' and attrs['mappolygon'] is not None
+            print attrs
             if mappoint and mappolygon:
                 #ambiguous - not allowed
                 print attrs
                 raise exceptions.ParseError()
             try:
                 if mappoint:
-                    mp = MapPoint.objects.get(id=attrs['mappoint'])
+                    attrs['mapelement'] = attrs['mappoint']
+                    del attrs['mappoint']
+                    mp = MapPoint.objects.get(id=attrs['mapelement'])
                 else:
-                    mp = MapPolygon.objects.get(id=attrs['mappolygon']) 
+                    attrs['mapelement'] = attrs['mappolygon']
+                    del attrs['mappolygon']
+                    mp = MapPolygon.objects.get(id=attrs['mapelement']) 
             except:
                 raise exceptions.ParseError()
             if ',' in attrs['tag']:
@@ -220,11 +247,11 @@ class AnalyzeAreaSerializer(serializers.ModelSerializer):
     field3 = serializers.CharField(source = 'mappoint.field3')
 
     tags = serializers.SerializerMethodField('get_tags')
-    #area_around_point = serializers.SerializerMethodField('area_around_point')
+    areaAroundPoint = serializers.SerializerMethodField('area_around_point')
 
     class Meta:
         model = MapPoint 
-        fields = ('dataset','id','name','street','city','state','zipcode','county','field1','field2','field3','tags','area_around_point')
+        fields = ('street','city','state','zipcode','county','field1','field2','field3','tags','areaAroundPoint')
 
     def get_tags(self, mappoint):
         #build nested distinct list
@@ -233,131 +260,84 @@ class AnalyzeAreaSerializer(serializers.ModelSerializer):
     def area_around_point(self, mappoint):
         request = self.context.get('request', None)
 
-        id_list = request.GET.getlist('id')
+        years = request.GET.getlist('year')
+        datasets = Dataset.objects.filter(name__icontains='census')
+        if len(years) > 0:
+            d = Dataset.objects.none()
+            for y in years:
+                d = d | datasets.filter(name__contains=y.strip())
+            datasets = d
+        if len(datasets) == 0:
+            return {}
+        else:
+            dataset_id = datasets[0].id
+
+        ### DISTANCES
         distances = request.GET.getlist('distance')
         unit = request.GET.getlist('unit')
-        years = request.GET.getlist('year')
-        level = request.GET.getlist('level')
-
-        
         if len(unit) > 1:
-            return HttpResponseBadRequest('No more than one unit may be specified')
+            return HttpResponseBadRequest('No more than one unit may be specified.')
         elif len(unit) == 0:
             unit = 'mi'
         elif unit[0] in ['m','km','mi']:
             unit = unit[0]
         else:
             return HttpResponseBadRequest('Accepted units: m, km, mi')
-        if len(level) == 1 and level[0] == 'point':
-            by_point = True
-        elif len(level) == 0:
-            by_point = False
-        else:
-            return HttpResponseBadRequest('Please specify level as "point" or not at all' )
-
         if len(distances) == 0:
             distances = [1,3,5]
             unit = 'km'
         else:
             distances.sort()
 
-        ids = []
-        for i in id_list:
-            try:
-                n = int(i)
-                ids.append(n)
-            except:
-                return HttpResponseBadRequest('Please use MapPoint ids (integers) only')
-        try:
-            dataset_id = int(dataset_ids[0])
-        except:
-            return HttpResponseBadRequest('Dataset must be given as an id (integer)')
-
-        all_points = MapPoint.filter(dataset__id__exact = dataset_id)
-
-        if len(id_list) > 0:
-            points = all_points.in_bulk(ids).all()
-        else:
-            points = all_points.all()
-
         max_dist_between = distances[-1] * 2
         kwargs = {unit: max_dist_between}
         max_dist_between =  Distance(**kwargs)
+        dist_objs = []
         for dist in distances:
             kwargs = {unit: dist}
-            dist = Distance(**kwargs) 
+            dist_objs.append(Distance(**kwargs))
 
         all_points = filter_request(request.QUERY_PARAMS,'mappoint').filter(point__distance_lte=(mappoint.point,max_dist_between))
+        assert mappoint in all_points
 
-        already_accounted = MapPolygon.objects.none()
-        polygons = []
-        for dist in distances:
-            poly = MapPoint.objects.none()
+
+        data_sums = {'point id(s)':'', 'view url(s)':[]}
+        for p in all_points:
+            data_sums['point id(s)'] = data_sums['point id(s)'] + ',' + str(p.id)
+            data_sums['view url(s)'].append('/around-point/%d/' %(p.id))
+        data_sums['point id(s)'] = data_sums['point id(s)'].strip(',')
+        already_accounted = set()
+        for dist in dist_objs:
+            if unit == 'm':
+                dist_str = '%f m' %(dist.m)
+            elif unit == 'km':
+                dist_str = '%f km' %(dist.km)
+            elif unit == 'mi':
+                dist_str = '%f mi' %(dist.mi)
+            poly = set()
             for p in all_points:
-                poly = poly | MapPolygon.objects.filter(dataset_id__exact=poly_dataset.id).filter(poly__dwithin=(p.point,dist))
-                maybe_polys = MapPolygon.objects.filter(dataset_id__exact=poly_dataset.id).filter(poly__intersects).exclude(poly__dwithin=(p.point,dist))
-            poly = poly.exclude(pk__in=already_accounted)
-            polygons.append(poly)
-            already_accounted = already_accounted | polys
-        
-        for year in years:
-            totals = []
-            poly_dataset = Dataset.objects.filter(name__icontains='census').filter(name__icontains=year.strip())
-            if len(poly_dataset) < 1:
-                return HttpResponseBadRequest('Census year data does not exist for the year '+year)
-            poly_dataset = poly_dataset[0]
-            datafields = DataField.objects.filter(dataset_id__exact=poly_dataset.id).exclude(field_type__exact=DataField.STRING)
-            data_sums_total = {}
-            data_sums = {}
-            for point in points:
-                if by_point:
-                    point_name = point.name
-                nearby = all_points.exclude(id__exact=point.id).filter(point__distance_lte=(point.point, max_dist_between))
-                for n in nearby:
-                    if by_point:
-                        point_name = point_name + ',' + n.name
-                    points = points.exclude(id__exact=n.id)
+                boundary = circle_as_polygon(lat = p.point.y, lon = p.point.x, n = CIRCLE_EDGES, distance = dist)
+                poly = poly | set(MapPolygon.objects.filter(dataset_id__exact=dataset_id).filter(mpoly__covers=boundary).exclude(pk__in=already_accounted).values_list('id',flat=True))
+                curr_polys = MapPolygon.objects.filter(dataset_id__exact=dataset_id).exclude(mpoly__covers=boundary).exclude(pk__in=already_accounted).filter(mpoly__intersects=boundary)
+                for polygon in curr_polys:
+                    if polygon.mpoly.intersection(boundary).area > .5 * polygon.mpoly.area:
+                        poly.add(polygon.id)
+            already_accounted = already_accounted | poly
+            data_sums[dist_str] = {}
+            data_sums[dist_str]['polygon count'] = len(poly)
+            if data_sums[dist_str]['polygon count'] > 0:
+                data_sums[dist_str]['polygons'] = str(list(poly))
+                datafields = DataField.objects.filter(dataset_id__exact=dataset_id).exclude(field_type__exact=DataField.STRING)
+                for field in datafields:
+                    if field.field_longname not in data_sums[dist_str]:
+                        data_sums[dist_str][field.field_longname] = {}
+                    if field.field_type == DataField.INTEGER:
+                        data = DataElement.objects.filter(datafield_id__exact=field.id).filter(mapelement_id__in=poly).aggregate(sum=Sum('int_data'),dsum=Sum('denominator__int_data'))
+                    elif field.field_type == DataField.FLOAT:
+                        data = DataElement.objects.filter(datafield_id__exact=field.id).filter(mapelement_id__in=poly).aggregate(sum=Sum('float_data'),dsum=Sum('denominator__float_data'))
+                    else:
+                        continue
+                    data_sums[dist_str][field.field_longname][field.field_en] = data['sum']
+                    data_sums[dist_str][field.field_longname]['total']= data['dsum']
 
-                
-                    
-                    for poly in polys:
-                        for field in datafields:
-                            if field not in data_sums:
-                                data_sums[field] = {}
-                            if dist not in data_sums[field]:
-                                data_sums[field][dist] = 0
-                            try:
-                                de = DataElement.objects.filter(datafield_id__exact=field.id).filter(mapelement_id__exact=poly.id)
-                            except DataElement.DoesNotExist:
-                                continue
-                            if field.type == DataField.INTEGER:
-                                data_sums[field][dist] = data_sums[field][dist] + de.int_data
-                            elif field.type == DataField.FLOAT:
-                                data_sums[field][dist] = data_sums[field][dist] + de.float_data
-
-                    last = dist
-                if by_point:
-                    for field in data_sums:
-                        row = [year,point_name,field]
-                        for dist in distances:
-                            if field not in data_sums_total:
-                                data_sums_total[field] = {}
-                            if dist not in data_sums_total[field]:
-                                data_sums_total[field][dist] = 0
-                            row.append(data_sums[field][dist])
-                            data_sums_total[field][dist] = data_sums_total[field][dist] + data_sums[field][dist]
-                        writer.writerow(row)
-                    data_sums = {}
-            if not by_point:
-                data_sums_total = data_sums
-            for field in data_sums:
-                row = [year,point_name,field]
-                for dist in distances:
-                    if field not in data_sums_total:
-                        data_sums_total[field] = {}
-                    if dist not in data_sums_total[field]:
-                        data_sums_total[field][dist] = 0
-                    row.append(data_sums[field][dist])
-                    data_sums_total[field][dist] = data_sums_total[field][dist] + data_sums[field][dist]
-
-        return response
+        return data_sums
