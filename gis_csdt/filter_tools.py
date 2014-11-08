@@ -1,6 +1,6 @@
 from django.contrib.gis.geos import Polygon, Point
 from gis_csdt.models import Dataset, MapElement, MapPoint, Tag, MapPolygon, TagIndiv, DataField, DataElement
-from django.contrib.gis.measure import Distance, Area
+from django.contrib.gis.measure import Distance
 
 def filter_request(parameters, model_type):
 
