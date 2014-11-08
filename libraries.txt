@@ -10,5 +10,5 @@ setuptools>=3.6
 six>=1.7.3
 wsgiref>=0.1.2
 numpy>=1.9.
-pytho-dateutil>=2.2
+python-dateutil>=2.2
 pytz>=2014.7
