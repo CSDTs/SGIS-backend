@@ -266,8 +266,10 @@ class DataField(models.Model):
 class DataElement(models.Model):
 	datafield = models.ForeignKey(DataField, related_name = 'dataElements')
 	mapelement = models.ForeignKey(MapElement)
-	int_data = models.IntegerField(blank=True, null=True)
-	float_data = models.FloatField(blank=True, null=True)
+	denominator = models.ForeignKey('self', null=True)
+	error = models.FloatField(null=True)
+	int_data = models.IntegerField(null=True)
+	float_data = models.FloatField(null=True)
 	char_data = models.CharField(blank=True, null=True, max_length=200)
 
 	def __unicode__(self):
