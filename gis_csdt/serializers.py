@@ -1,4 +1,4 @@
-from gis_csdt.models import Dataset, MapPoint, Tag, TagIndiv, MapPolygon, DataField, DataElement
+from gis_csdt.models import Dataset, MapElement, MapPoint, Tag, TagIndiv, MapPolygon, DataField, DataElement
 from gis_csdt.filter_tools import filter_request
 from gis_csdt.geometry_tools import circle_as_polygon
 from rest_framework import serializers, exceptions
@@ -20,29 +20,44 @@ CIRCLE_EDGES = 12 #number of edges on polygon estimation of a circle
         model = TagIndiv
         fields = ('mappoint','mappolygon','tag')'''
 
+class MapElementIdField(serializers.WritableField):
+    def __init__(self, *args,**kwargs):
+        self.field = kwargs.pop('field')
+        super(MapElementIdField, self).__init__(*args, **kwargs)
+    def to_native(self, obj):
+        try:
+            r = getattr(obj,self.field)
+            return r.id
+        except ObjectDoesNotExist:
+            return None
+    def from_native(self, data):
+        try:
+            return MapElement.objects.get(id=int(data))
+        except ObjectDoesNotExist:
+            return None
+
 class NewTagSerializer(serializers.ModelSerializer):
-    #mappoint = serializers.IntegerField(required=False, source='mapelement.mappoint.mapelement_ptr') 
-    mappoint = serializers.SerializerMethodField('get_mappoint')
-    #mappolygon = serializers.IntegerField(required=False, source='mapelement.mappolygon.mapelement_ptr') 
-    mappolygon = serializers.SerializerMethodField('get_mappolygon')
+    mappoint = MapElementIdField(required=False, source='mapelement', field='mappoint')
+    mappolygon = MapElementIdField(required=False, source='mapelement', field='mappolygon')
     tag = serializers.CharField()
+
 
     class Meta:
         model = TagIndiv
         fields = ('mappoint','mappolygon','tag')
 
-    def get_mappoint(self, mp):
-        try:
-            mp.mapelement.mappoint
-            return mp.mapelement_id
-        except ObjectDoesNotExist:
-            return None
-    def get_mappolygon(self, mp):
-        try:
-            mp.mapelement.mappolygon
-            return mp.mapelement_id
-        except ObjectDoesNotExist:
-            return None
+    '''def get_mappoint(self, mp):
+                    try:
+                        mp.mapelement.mappoint
+                        return mp.mapelement_id
+                    except ObjectDoesNotExist:
+                        return None
+                def get_mappolygon(self, mp):
+                    try:
+                        mp.mapelement.mappolygon
+                        return mp.mapelement_id
+                    except ObjectDoesNotExist:
+                        return None'''
 
     def restore_object(self, attrs, instance=None):
         #only react to a post

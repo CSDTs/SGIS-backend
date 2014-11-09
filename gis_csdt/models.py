@@ -191,6 +191,18 @@ class MapElement(models.Model):
 
 	def __unicode__(self):
 		return self.name
+	def polygon_id(self):
+		try:
+			self.mappolygon
+			return self.id
+		except:
+			return None
+	def point_id(self):
+		try:
+			self.mappoint
+			return self.id
+		except:
+			return None
 
 	#class Meta:
 	#	abstract = True
