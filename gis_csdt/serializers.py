@@ -1,13 +1,14 @@
 from gis_csdt.models import Dataset, MapElement, MapPoint, Tag, TagIndiv, MapPolygon, DataField, DataElement
 from gis_csdt.filter_tools import filter_request
 from gis_csdt.geometry_tools import circle_as_polygon
+from gis_csdt.settings import CENSUS_API_KEY
 from rest_framework import serializers, exceptions
 from rest_framework_gis import serializers as gis_serializers
 from django.contrib.gis.measure import Distance, Area
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Sum, Count
 from django.http import HttpResponse, HttpRequest, HttpResponseBadRequest, HttpResponseNotAllowed
-import copy
+import copy, json, urllib
 
 CIRCLE_EDGES = 12 #number of edges on polygon estimation of a circle
 
@@ -33,72 +34,44 @@ class MapElementIdField(serializers.WritableField):
     def from_native(self, data):
         try:
             return MapElement.objects.get(id=int(data))
-        except ObjectDoesNotExist:
+        except (ObjectDoesNotExist, ValueError):
             return None
 
 class NewTagSerializer(serializers.ModelSerializer):
-    mappoint = MapElementIdField(required=False, source='mapelement', field='mappoint')
-    mappolygon = MapElementIdField(required=False, source='mapelement', field='mappolygon')
+    #mappolygon = MapElementIdField(required=False, source='mapelement_id', field='mappolygon')
+    mappoint = serializers.IntegerField(source='mapelement_id')
     tag = serializers.CharField()
 
 
     class Meta:
         model = TagIndiv
-        fields = ('mappoint','mappolygon','tag')
-
-    '''def get_mappoint(self, mp):
-                    try:
-                        mp.mapelement.mappoint
-                        return mp.mapelement_id
-                    except ObjectDoesNotExist:
-                        return None
-                def get_mappolygon(self, mp):
-                    try:
-                        mp.mapelement.mappolygon
-                        return mp.mapelement_id
-                    except ObjectDoesNotExist:
-                        return None'''
+        fields = ('mappoint','tag')
 
     def restore_object(self, attrs, instance=None):
-        #only react to a post
-        if not instance:
-            #find the mappoint
-            mappoint = 'mappoint' in attrs.keys() and attrs['mappoint']!='' and attrs['mappoint'] is not None
-            mappolygon = 'mappolygon' in attrs.keys() and attrs['mappolygon']!='' and attrs['mappolygon'] is not None
-            print attrs
-            if mappoint and mappolygon:
-                #ambiguous - not allowed
-                print attrs
-                raise exceptions.ParseError()
-            try:
-                if mappoint:
-                    attrs['mapelement'] = attrs['mappoint']
-                    del attrs['mappoint']
-                    mp = MapPoint.objects.get(id=attrs['mapelement'])
-                else:
-                    attrs['mapelement'] = attrs['mappolygon']
-                    del attrs['mappolygon']
-                    mp = MapPolygon.objects.get(id=attrs['mapelement']) 
-            except:
-                raise exceptions.ParseError()
-            if ',' in attrs['tag']:
-                return None
-            attrs['tag'] = attrs['tag'].strip().lower()
+        #find the mappoint
+        try:
+            mp = MapElement.objects.get(id=attrs['mapelement_id'])
+        except:
+            raise exceptions.ParseError()
+        if ',' in attrs['tag']:
+            return None
+        attrs['tag'] = attrs['tag'].strip().lower()
 
-            tags = Tag.objects.filter(dataset = mp.dataset, tag = attrs['tag'])
-            len_tags = len(tags)
-            if len_tags == 0:
-                tag = Tag(dataset = mp.dataset, tag = attrs['tag'])
-                tag.save()
-            elif len_tags == 1:
-                tag = tags[0]
+        tags = Tag.objects.filter(dataset = mp.dataset, tag = attrs['tag'])
+        len_tags = len(tags)
+        if len_tags == 0:
+            tag = Tag(dataset = mp.dataset, tag = attrs['tag'])
+            tag.save()
+        elif len_tags == 1:
+            tag = tags[0]
+        else:
+            approved_tags = tags.filter(approved = True)
+            if len(approved_tags) > 0:
+                tag = approved_tags[0]
             else:
-                approved_tags = tags.filter(approved = True)
-                if len(approved_tags) > 0:
-                    tag = approved_tags[0]
-                else:
-                    tag = tags[0]
-        return TagIndiv(mapelement = mp, tag = tag)
+                tag = tags[0]
+        return TagIndiv(mapelement=mp, tag=tag)
+        return t
 
 class TagCountSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
@@ -262,7 +235,7 @@ class AnalyzeAreaSerializer(serializers.ModelSerializer):
     field3 = serializers.CharField(source = 'mappoint.field3')
 
     tags = serializers.SerializerMethodField('get_tags')
-    areaAroundPoint = serializers.SerializerMethodField('area_around_point')
+    areaAroundPoint = serializers.SerializerMethodField('area_around_point2')
 
     class Meta:
         model = MapPoint 
@@ -354,5 +327,129 @@ class AnalyzeAreaSerializer(serializers.ModelSerializer):
                         continue
                     data_sums[dist_str][field.field_longname][field.field_en] = data['sum']
                     data_sums[dist_str][field.field_longname]['total']= data['dsum']
+
+        return data_sums
+
+    def area_around_point2(self, mappoint):
+        request = self.context.get('request', None)
+
+        years = request.GET.getlist('year')
+        datasets = Dataset.objects.filter(name__icontains='census')
+        if len(years) > 0:
+            d = Dataset.objects.none()
+            for y in years:
+                d = d | datasets.filter(name__contains=y.strip())
+            datasets = d
+        if len(datasets) == 0:
+            return {}
+        else:
+            dataset_id = datasets[0].id
+
+        ### DISTANCES
+        distances = request.GET.getlist('distance')
+        unit = request.GET.getlist('unit')
+        if len(unit) > 1:
+            return HttpResponseBadRequest('No more than one unit may be specified.')
+        elif len(unit) == 0:
+            unit = 'mi'
+        elif unit[0] in ['m','km','mi']:
+            unit = unit[0]
+        else:
+            return HttpResponseBadRequest('Accepted units: m, km, mi')
+        if len(distances) == 0:
+            distances = [1,3,5]
+            unit = 'km'
+        else:
+            distances.sort()
+
+        max_dist_between = distances[-1] * 2
+        kwargs = {unit: max_dist_between}
+        max_dist_between =  Distance(**kwargs)
+        dist_objs = []
+        for dist in distances:
+            kwargs = {unit: dist}
+            dist_objs.append(Distance(**kwargs))
+
+        all_points = filter_request(request.QUERY_PARAMS,'mappoint').filter(point__distance_lte=(mappoint.point,max_dist_between))
+        assert mappoint in all_points
+
+        #variables = ['Total Population','Area (km2)','Total (Race)', 'White Only', 'African American', 'Hispanic','Asian/Pacific Islander', 'Native American','Total (Poverty)','below 1.00', 'weighted mean of median household income','Mean Housing Value']
+        variables = {'B02001_001E':{},'B02001_002E':{},'B02009_001E':{},'B03001_001E':{},'B03001_003E':{},'B02011_001E':{}, 'B02012_001E':{},'B02010_001E':{},'B05010_001E':{},'B05010_002E':{},'B19061_001E':{},'B25105_001E':{},'B25077_001E':{},'B25077_001E':{}}
+        for v in variables:
+            request = 'http://api.census.gov/data/2010/acs5/variables/%s.json?key=%s' %(v,CENSUS_API_KEY)
+            try:
+                data = json.loads(urllib.urlopen(request).read())
+            except Exception as e:
+                print 'variable info for %s failed to load: %s'%(v,request)
+                print e
+                continue
+            variables[v] = data
+
+
+        data_sums = {'point id(s)':'', 'view url(s)':[]}
+        for p in all_points:
+            data_sums['point id(s)'] = data_sums['point id(s)'] + ',' + str(p.id)
+            data_sums['view url(s)'].append('/around-point/%d/' %(p.id))
+        data_sums['point id(s)'] = data_sums['point id(s)'].strip(',')
+        already_accounted = set()
+        for dist in dist_objs:
+            if unit == 'm':
+                dist_str = '%f m' %(dist.m)
+            elif unit == 'km':
+                dist_str = '%f km' %(dist.km)
+            elif unit == 'mi':
+                dist_str = '%f mi' %(dist.mi)
+            poly = set()
+            for p in all_points:
+                boundary = circle_as_polygon(lat = p.point.y, lon = p.point.x, n = CIRCLE_EDGES, distance = dist)
+                poly = poly | set(MapPolygon.objects.filter(dataset_id__exact=dataset_id).filter(mpoly__covers=boundary).exclude(remote_id__in=already_accounted).values_list('remote_id',flat=True))
+                curr_polys = MapPolygon.objects.filter(dataset_id__exact=dataset_id).exclude(mpoly__covers=boundary).exclude(remote_id__in=already_accounted).filter(mpoly__intersects=boundary)
+                for polygon in curr_polys:
+                    if polygon.mpoly.intersection(boundary).area > .5 * polygon.mpoly.area:
+                        poly.add(polygon.remote_id)
+            already_accounted = already_accounted | poly
+            data_sums[dist_str] = {}
+            data_sums[dist_str]['polygon count'] = len(poly)
+            data_sums[dist_str]['land area (m2)'] = sum([int(i) for i in MapPolygon.objects.filter(dataset_id__exact=dataset_id,remote_id__in=poly).values_list('field1',flat=True)])
+            if data_sums[dist_str]['polygon count'] > 0:
+                data_sums[dist_str]['polygons'] = str(list(poly))
+                if year == '2010':
+                    get = ''
+                    for e in variables:
+                        get = get + ',' + e
+                    get = get.strip(',')
+                    tracts = {}
+                    for e in poly:
+                        if e[:2] not in tracts:
+                            tracts[e[:2]] = {}
+                        if e[2:5] not in tracts[e[:2]]:
+                            tracts[e[:2]][e[2:5]]=''
+                        tracts[e[:2]][e[2:5]] = tracts[e[:2]][e[2:5]] + ',' + e[-6:]
+                    for state in tracts:
+                        for county in tracts[state]:
+                            request = 'http://api.census.gov/data/2010/acs5?key=%s&get=%s,NAME&for=tract:%s&in=state:%s,county:%s' %(CENSUS_API_KEY,get,tracts[state][county].strip(','),state,county)
+                            try:
+                                url = urllib.urlopen(request).read()
+                                data = json.loads(url)
+                            except Exception as e:
+                                print e
+                                print url
+                                print request
+                                continue
+                            line = data[0]
+                            locations = {}
+                            for i in range(len(line)):
+                                locations[line[i]] = i
+                                if line[i] not in data_sums[dist_str] and line[i] in variables:
+                                    data_sums[dist_str][line[i]] = copy.deepcopy(variables[line[i]])
+                                    data_sums[dist_str][line[i]]['sum'] = 0
+
+                            for line in data[1:]:
+                                #get area
+                                for v in variables:
+                                    try:
+                                        data_sums[dist_str][v]['sum'] = data_sums[dist_str][v]['sum'] + int(line[locations[v]])
+                                    except:
+                                        continue
 
         return data_sums

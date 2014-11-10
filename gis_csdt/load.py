@@ -317,7 +317,7 @@ def hazardous_waste(year=2011, verbose=True):
     except ObjectDoesNotExist:
         dataset = Dataset(
             name="Hazardous Waste Sites "+str(year),
-            url='/data/ej/',
+            url='/data/ej/'+str(year)+'/',
             cached=datetime.utcnow().replace(tzinfo=utc),
             cache_max_age=1000,
             remote_id_field="Handler ID",
@@ -340,11 +340,16 @@ def hazardous_waste(year=2011, verbose=True):
 
     for state in ['AL','AK','AZ','AR','CA','CO','CT','DE','DC','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY']:
         short_name = 'Envirofacts_Biennial_Report_Search '+state+'.CSV'
-        path = os.path.abspath(os.path.join(os.path.dirname(__file__), 'data/ej/'+short_name))
+        path = os.path.abspath(os.path.join(os.path.dirname(__file__), 'data/ej/'+str(year)+'/'+short_name))
         if not os.path.isfile(path):
             if verbose:
                 print 'No file %s exists.' %(short_name)
-            continue
+            short_name = str(year)+' '+state+'.CSV'
+            path = os.path.abspath(os.path.join(os.path.dirname(__file__), 'data/ej/'+str(year)+'/'+short_name))
+            if not os.path.isfile(path):
+                if verbose:
+                    print 'No file %s exists.' %(short_name)
+                continue
         if verbose:
             print 'Opening file %s' %(short_name)
         readfile = csv.reader(open(path,'rb'))
