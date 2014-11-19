@@ -71,7 +71,6 @@ class NewTagSerializer(serializers.ModelSerializer):
             else:
                 tag = tags[0]
         return TagIndiv(mapelement=mp, tag=tag)
-        return t
 
 class TagCountSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
@@ -235,7 +234,7 @@ class AnalyzeAreaSerializer(serializers.ModelSerializer):
     field3 = serializers.CharField(source = 'mappoint.field3')
 
     tags = serializers.SerializerMethodField('get_tags')
-    areaAroundPoint = serializers.SerializerMethodField('area_around_point2')
+    areaAroundPoint = serializers.SerializerMethodField('area_around_point')
 
     class Meta:
         model = MapPoint 
@@ -285,14 +284,22 @@ class AnalyzeAreaSerializer(serializers.ModelSerializer):
             kwargs = {unit: dist}
             dist_objs.append(Distance(**kwargs))
 
-        all_points = filter_request(request.QUERY_PARAMS,'mappoint').filter(point__distance_lte=(mappoint.point,max_dist_between))
-        assert mappoint in all_points
+        all_possible_points = filter_request(request.QUERY_PARAMS,'mappoint')
+        all_points=all_possible_points.filter(point__distance_lte=(mappoint.point,max_dist_between)).distinct()
+        point_set = set(all_points.values_list('point',flat=True))
+        for point in point_set:
+            new_points = all_possible_points.filter(point__distance_lte=(point,max_dist_between))
+            all_points = all_points | new_points
+            all_points = all_points.distinct()
+            point_set.union(set(new_points.values_list('point',flat=True)))
+        #assert mappoint in all_points
 
 
         data_sums = {'point id(s)':'', 'view url(s)':[]}
         for p in all_points:
             data_sums['point id(s)'] = data_sums['point id(s)'] + ',' + str(p.id)
             data_sums['view url(s)'].append('/around-point/%d/' %(p.id))
+        data_sums['view url(s)'] = str(data_sums['view url(s)'])
         data_sums['point id(s)'] = data_sums['point id(s)'].strip(',')
         already_accounted = set()
         for dist in dist_objs:
@@ -305,14 +312,15 @@ class AnalyzeAreaSerializer(serializers.ModelSerializer):
             poly = set()
             for p in all_points:
                 boundary = circle_as_polygon(lat = p.point.y, lon = p.point.x, n = CIRCLE_EDGES, distance = dist)
-                poly = poly | set(MapPolygon.objects.filter(dataset_id__exact=dataset_id).filter(mpoly__covers=boundary).exclude(pk__in=already_accounted).values_list('id',flat=True))
-                curr_polys = MapPolygon.objects.filter(dataset_id__exact=dataset_id).exclude(mpoly__covers=boundary).exclude(pk__in=already_accounted).filter(mpoly__intersects=boundary)
+                poly = poly | set(MapPolygon.objects.filter(dataset_id__exact=dataset_id).filter(mpoly__covers=boundary).exclude(remote_id__in=already_accounted).values_list('remote_id',flat=True))
+                curr_polys = MapPolygon.objects.filter(dataset_id__exact=dataset_id).exclude(mpoly__covers=boundary).exclude(remote_id__in=already_accounted).filter(mpoly__intersects=boundary)
                 for polygon in curr_polys:
                     if polygon.mpoly.intersection(boundary).area > .5 * polygon.mpoly.area:
-                        poly.add(polygon.id)
+                        poly.add(polygon.remote_id)
             already_accounted = already_accounted | poly
             data_sums[dist_str] = {}
             data_sums[dist_str]['polygon count'] = len(poly)
+            data_sums[dist_str]['land area (m2)'] = sum([int(i) for i in MapPolygon.objects.filter(dataset_id__exact=dataset_id,remote_id__in=poly).values_list('field1',flat=True)])
             if data_sums[dist_str]['polygon count'] > 0:
                 data_sums[dist_str]['polygons'] = str(list(poly))
                 datafields = DataField.objects.filter(dataset_id__exact=dataset_id).exclude(field_type__exact=DataField.STRING)
@@ -320,9 +328,10 @@ class AnalyzeAreaSerializer(serializers.ModelSerializer):
                     if field.field_longname not in data_sums[dist_str]:
                         data_sums[dist_str][field.field_longname] = {}
                     if field.field_type == DataField.INTEGER:
-                        data = DataElement.objects.filter(datafield_id__exact=field.id).filter(mapelement_id__in=poly).aggregate(sum=Sum('int_data'),dsum=Sum('denominator__int_data'))
+                        data = DataElement.objects.filter(datafield_id=field.id,mapelement__remote_id__in=poly).aggregate(sum=Sum('int_data'),dsum=Sum('denominator__int_data'))
+                        #print data['sum'], data['dsum']
                     elif field.field_type == DataField.FLOAT:
-                        data = DataElement.objects.filter(datafield_id__exact=field.id).filter(mapelement_id__in=poly).aggregate(sum=Sum('float_data'),dsum=Sum('denominator__float_data'))
+                        data = DataElement.objects.filter(datafield_id=field.id,mapelement__remote_id__in=poly).aggregate(sum=Sum('float_data'),dsum=Sum('denominator__float_data'))
                     else:
                         continue
                     data_sums[dist_str][field.field_longname][field.field_en] = data['sum']
@@ -334,6 +343,7 @@ class AnalyzeAreaSerializer(serializers.ModelSerializer):
         request = self.context.get('request', None)
 
         years = request.GET.getlist('year')
+        year = years[0]
         datasets = Dataset.objects.filter(name__icontains='census')
         if len(years) > 0:
             d = Dataset.objects.none()
@@ -374,7 +384,8 @@ class AnalyzeAreaSerializer(serializers.ModelSerializer):
         assert mappoint in all_points
 
         #variables = ['Total Population','Area (km2)','Total (Race)', 'White Only', 'African American', 'Hispanic','Asian/Pacific Islander', 'Native American','Total (Poverty)','below 1.00', 'weighted mean of median household income','Mean Housing Value']
-        variables = {'B02001_001E':{},'B02001_002E':{},'B02009_001E':{},'B03001_001E':{},'B03001_003E':{},'B02011_001E':{}, 'B02012_001E':{},'B02010_001E':{},'B05010_001E':{},'B05010_002E':{},'B19061_001E':{},'B25105_001E':{},'B25077_001E':{},'B25077_001E':{}}
+        #variables = {'B02001_001E':{},'B02001_002E':{},'B02009_001E':{},'B03001_001E':{},'B03001_003E':{},'B02011_001E':{}, 'B02012_001E':{},'B02010_001E':{},'B05010_001E':{},'B05010_002E':{},'B19061_001E':{},'B25105_001E':{},'B25077_001E':{},'B25077_001E':{}}
+        variables = {'B00001_001E':{},'B02001_001E':{},'B02001_002E':{},'B02001_003E':{},'B02001_004E':{},'B02001_005E':{},'B02001_006E':{},'B02001_007E':{},'B02001_008E':{},'B03001_001E':{},'B03001_003E':{},'C17002_001E':{},'C17002_002E':{},'C17002_003E':{}}
         for v in variables:
             request = 'http://api.census.gov/data/2010/acs5/variables/%s.json?key=%s' %(v,CENSUS_API_KEY)
             try:
