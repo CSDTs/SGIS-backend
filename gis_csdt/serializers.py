@@ -1,5 +1,5 @@
 from gis_csdt.models import Dataset, MapElement, MapPoint, Tag, TagIndiv, MapPolygon, DataField, DataElement
-from gis_csdt.filter_tools import filter_request
+from gis_csdt.filter_tools import filter_request, neighboring_points
 from gis_csdt.geometry_tools import circle_as_polygon
 from gis_csdt.settings import CENSUS_API_KEY
 from rest_framework import serializers, exceptions
@@ -276,24 +276,12 @@ class AnalyzeAreaSerializer(serializers.ModelSerializer):
         else:
             distances.sort()
 
-        max_dist_between = distances[-1] * 2
-        kwargs = {unit: max_dist_between}
-        max_dist_between =  Distance(**kwargs)
         dist_objs = []
         for dist in distances:
             kwargs = {unit: dist}
             dist_objs.append(Distance(**kwargs))
 
-        all_possible_points = filter_request(request.QUERY_PARAMS,'mappoint')
-        all_points=all_possible_points.filter(point__distance_lte=(mappoint.point,max_dist_between)).distinct()
-        point_set = set(all_points.values_list('point',flat=True))
-        for point in point_set:
-            new_points = all_possible_points.filter(point__distance_lte=(point,max_dist_between))
-            all_points = all_points | new_points
-            all_points = all_points.distinct()
-            point_set.union(set(new_points.values_list('point',flat=True)))
-        #assert mappoint in all_points
-
+        all_points = neighboring_points(mappoint, filter_request(request.QUERY_PARAMS,'mappoint'), dist_objs[-1])
 
         data_sums = {'point id(s)':'', 'view url(s)':[]}
         for p in all_points:
@@ -372,17 +360,13 @@ class AnalyzeAreaSerializer(serializers.ModelSerializer):
         else:
             distances.sort()
 
-        max_dist_between = distances[-1] * 2
-        kwargs = {unit: max_dist_between}
-        max_dist_between =  Distance(**kwargs)
         dist_objs = []
         for dist in distances:
             kwargs = {unit: dist}
             dist_objs.append(Distance(**kwargs))
 
-        all_points = filter_request(request.QUERY_PARAMS,'mappoint').filter(point__distance_lte=(mappoint.point,max_dist_between))
-        assert mappoint in all_points
-
+        all_points = neighboring_points(mappoint, filter_request(request.QUERY_PARAMS,'mappoint'), dist_objs[-1])
+        
         #variables = ['Total Population','Area (km2)','Total (Race)', 'White Only', 'African American', 'Hispanic','Asian/Pacific Islander', 'Native American','Total (Poverty)','below 1.00', 'weighted mean of median household income','Mean Housing Value']
         #variables = {'B02001_001E':{},'B02001_002E':{},'B02009_001E':{},'B03001_001E':{},'B03001_003E':{},'B02011_001E':{}, 'B02012_001E':{},'B02010_001E':{},'B05010_001E':{},'B05010_002E':{},'B19061_001E':{},'B25105_001E':{},'B25077_001E':{},'B25077_001E':{}}
         variables = {'B00001_001E':{},'B02001_001E':{},'B02001_002E':{},'B02001_003E':{},'B02001_004E':{},'B02001_005E':{},'B02001_006E':{},'B02001_007E':{},'B02001_008E':{},'B03001_001E':{},'B03001_003E':{},'C17002_001E':{},'C17002_002E':{},'C17002_003E':{}}
