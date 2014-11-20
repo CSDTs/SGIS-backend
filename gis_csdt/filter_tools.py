@@ -105,3 +105,13 @@ def filter_request(parameters, model_type):
         return HttpResponseBadRequest('If a center or radius is specified, the other must also be specified.')
 
     return queryset.distinct()
+
+def neighboring_points(point, queryset, distance):
+    all_points=queryset.filter(point__distance_lte=(point.point,distance)).distinct()
+    point_set = set(all_points.values_list('point',flat=True))
+    for p in point_set:
+        new_points = queryset.filter(point__distance_lte=(p,distance))
+        all_points = all_points | new_points.distinct()
+        #all_points = all_points.distinct()
+        point_set.union(set(new_points.values_list('point',flat=True)))
+    return all_points
