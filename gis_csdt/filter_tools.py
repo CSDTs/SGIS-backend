@@ -1,4 +1,5 @@
 from django.contrib.gis.geos import Polygon, Point
+from gis_csdt.geometry_tools import circle_as_polygon
 from gis_csdt.models import Dataset, MapElement, MapPoint, Tag, MapPolygon, TagIndiv, DataField, DataElement
 from django.contrib.gis.measure import Distance
 
@@ -58,16 +59,16 @@ def filter_request(parameters, model_type):
 
     if model_type == 'mappoint':
         if 'street' in parameters:
-            queryset = queryset.filter(mappoint__street__iexact = parameters[model_type+'street'])
+            queryset = queryset.filter(mappoint__street__iexact = parameters['street'])
         if 'city' in parameters:
-            queryset = queryset.filter(mappoint__city__iexact = parameters[model_type+'city'])
+            queryset = queryset.filter(mappoint__city__iexact = parameters['city'])
         if 'state' in parameters:
-            queryset = queryset.filter(mappoint__state__iexact = parameters[model_type+'state'])
+            queryset = queryset.filter(mappoint__state__iexact = parameters['state'])
         if 'county' in parameters:
-            queryset = queryset.filter(mappoint__county__iexact = parameters[model_type+'county'])
+            queryset = queryset.filter(mappoint__county__iexact = parameters['county'])
         for key in ['zipcode','zip','zip_code']:
             if key in parameters:
-                queryset = queryset.filter(mappoint__zipcode__iexact = parameters[model_type+key])
+                queryset = queryset.filter(mappoint__zipcode__iexact = parameters[key])
 
     bb = {}
     for key in ['max_lat','min_lat','max_lon','min_lon']:
@@ -112,6 +113,13 @@ def neighboring_points(point, queryset, distance):
     for p in point_set:
         new_points = queryset.filter(point__distance_lte=(p,distance))
         all_points = all_points | new_points.distinct()
-        #all_points = all_points.distinct()
         point_set.union(set(new_points.values_list('point',flat=True)))
     return all_points
+
+def unite_radius_bubbles(points, distances):
+    geometry = {}
+    for d in distances:
+        geometry[d] = circle_as_polygon(lat = points[0].point.y, lon = points[0].point.x, distance = d)
+        for p in points[1:]:
+            geometry[d] = geometry[d].union(circle_as_polygon(lat = p.point.y, lon = p.point.x, distance = d))
+    return geometry

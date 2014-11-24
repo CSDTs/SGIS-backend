@@ -7,7 +7,7 @@ from django.contrib.gis.measure import Distance, Area
 from django.core.paginator import Paginator
 from django.http import HttpResponse, HttpRequest, HttpResponseBadRequest, HttpResponseNotAllowed
 from django.shortcuts import render
-from gis_csdt.filter_tools import filter_request
+from gis_csdt.filter_tools import filter_request, neighboring_points
 from gis_csdt.models import Dataset, MapElement, MapPoint, Tag, MapPolygon, TagIndiv, DataField, DataElement
 from gis_csdt.serializers import TagCountSerializer, DatasetSerializer, MapPointSerializer, NewTagSerializer, MapPolygonSerializer, CountPointsSerializer, AnalyzeAreaSerializer
 #import csv
@@ -163,4 +163,25 @@ class AnalyzeAreaAroundPointView(viewsets.ReadOnlyModelViewSet):
                 mappoint_params[param] = result
         #now get the queryset
         points = filter_request(mappoint_params,'mappoint')
-        return points
+        distances = self.request.GET.getlist('distance')
+        unit = self.request.GET.getlist('unit')
+        if len(unit) > 1:
+            return HttpResponseBadRequest('No more than one unit may be specified.')
+        elif len(unit) == 0:
+            unit = 'mi'
+        elif unit[0] in ['m','km','mi']:
+            unit = unit[0]
+        else:
+            return HttpResponseBadRequest('Accepted units: m, km, mi')
+        if len(distances) == 0:
+            distances = [1,3,5]
+            unit = 'km'
+        else:
+            distances.sort()
+        kwargs = {unit:distances[-1]}
+        take_out = []
+        for point in points:
+            if point.id in take_out:
+                continue
+            take_out.extend(neighboring_points(point, points, Distance(**kwargs)).exclude(id=point.id).values_list('id',flat=True))
+        return points.exclude(id__in=take_out)

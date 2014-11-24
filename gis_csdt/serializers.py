@@ -1,5 +1,5 @@
 from gis_csdt.models import Dataset, MapElement, MapPoint, Tag, TagIndiv, MapPolygon, DataField, DataElement
-from gis_csdt.filter_tools import filter_request, neighboring_points
+from gis_csdt.filter_tools import filter_request, neighboring_points, unite_radius_bubbles
 from gis_csdt.geometry_tools import circle_as_polygon
 from gis_csdt.settings import CENSUS_API_KEY
 from rest_framework import serializers, exceptions
@@ -281,7 +281,7 @@ class AnalyzeAreaSerializer(serializers.ModelSerializer):
             kwargs = {unit: dist}
             dist_objs.append(Distance(**kwargs))
 
-        all_points = neighboring_points(mappoint, filter_request(request.QUERY_PARAMS,'mappoint'), dist_objs[-1])
+        all_points = neighboring_points(mappoint, MapPoint.objects.filter(dataset_id=mappoint.dataset_id), dist_objs[-1])
 
         data_sums = {'point id(s)':'', 'view url(s)':[]}
         for p in all_points:
@@ -290,6 +290,7 @@ class AnalyzeAreaSerializer(serializers.ModelSerializer):
         data_sums['view url(s)'] = str(data_sums['view url(s)'])
         data_sums['point id(s)'] = data_sums['point id(s)'].strip(',')
         already_accounted = set()
+        boundary = unite_radius_bubbles(all_points,dist_objs)
         for dist in dist_objs:
             if unit == 'm':
                 dist_str = '%f m' %(dist.m)
@@ -297,14 +298,11 @@ class AnalyzeAreaSerializer(serializers.ModelSerializer):
                 dist_str = '%f km' %(dist.km)
             elif unit == 'mi':
                 dist_str = '%f mi' %(dist.mi)
-            poly = set()
-            for p in all_points:
-                boundary = circle_as_polygon(lat = p.point.y, lon = p.point.x, n = CIRCLE_EDGES, distance = dist)
-                poly = poly | set(MapPolygon.objects.filter(dataset_id__exact=dataset_id).filter(mpoly__covers=boundary).exclude(remote_id__in=already_accounted).values_list('remote_id',flat=True))
-                curr_polys = MapPolygon.objects.filter(dataset_id__exact=dataset_id).exclude(mpoly__covers=boundary).exclude(remote_id__in=already_accounted).filter(mpoly__intersects=boundary)
-                for polygon in curr_polys:
-                    if polygon.mpoly.intersection(boundary).area > .5 * polygon.mpoly.area:
-                        poly.add(polygon.remote_id)
+            poly = set(MapPolygon.objects.filter(dataset_id__exact=dataset_id).filter(mpoly__covers=boundary[dist]).exclude(remote_id__in=already_accounted).values_list('remote_id',flat=True))
+            maybe_polys = MapPolygon.objects.filter(dataset_id__exact=dataset_id).exclude(mpoly__covers=boundary[dist]).exclude(remote_id__in=already_accounted).filter(mpoly__intersects=boundary[dist])
+            for polygon in maybe_polys:
+                if polygon.mpoly.intersection(boundary[dist]).area > .5 * polygon.mpoly.area:
+                    poly.add(polygon.remote_id)
             already_accounted = already_accounted | poly
             data_sums[dist_str] = {}
             data_sums[dist_str]['polygon count'] = len(poly)
@@ -365,8 +363,9 @@ class AnalyzeAreaSerializer(serializers.ModelSerializer):
             kwargs = {unit: dist}
             dist_objs.append(Distance(**kwargs))
 
-        all_points = neighboring_points(mappoint, filter_request(request.QUERY_PARAMS,'mappoint'), dist_objs[-1])
-        
+        all_points = neighboring_points(mappoint, MapPoint.objects.filter(dataset=mappoint.dataset_id), dist_objs[-1])
+        print all_points
+
         #variables = ['Total Population','Area (km2)','Total (Race)', 'White Only', 'African American', 'Hispanic','Asian/Pacific Islander', 'Native American','Total (Poverty)','below 1.00', 'weighted mean of median household income','Mean Housing Value']
         #variables = {'B02001_001E':{},'B02001_002E':{},'B02009_001E':{},'B03001_001E':{},'B03001_003E':{},'B02011_001E':{}, 'B02012_001E':{},'B02010_001E':{},'B05010_001E':{},'B05010_002E':{},'B19061_001E':{},'B25105_001E':{},'B25077_001E':{},'B25077_001E':{}}
         variables = {'B00001_001E':{},'B02001_001E':{},'B02001_002E':{},'B02001_003E':{},'B02001_004E':{},'B02001_005E':{},'B02001_006E':{},'B02001_007E':{},'B02001_008E':{},'B03001_001E':{},'B03001_003E':{},'C17002_001E':{},'C17002_002E':{},'C17002_003E':{}}
@@ -387,6 +386,8 @@ class AnalyzeAreaSerializer(serializers.ModelSerializer):
             data_sums['view url(s)'].append('/around-point/%d/' %(p.id))
         data_sums['point id(s)'] = data_sums['point id(s)'].strip(',')
         already_accounted = set()
+
+        boundary = unite_radius_bubbles(all_points,dist_objs)
         for dist in dist_objs:
             if unit == 'm':
                 dist_str = '%f m' %(dist.m)
@@ -394,14 +395,11 @@ class AnalyzeAreaSerializer(serializers.ModelSerializer):
                 dist_str = '%f km' %(dist.km)
             elif unit == 'mi':
                 dist_str = '%f mi' %(dist.mi)
-            poly = set()
-            for p in all_points:
-                boundary = circle_as_polygon(lat = p.point.y, lon = p.point.x, n = CIRCLE_EDGES, distance = dist)
-                poly = poly | set(MapPolygon.objects.filter(dataset_id__exact=dataset_id).filter(mpoly__covers=boundary).exclude(remote_id__in=already_accounted).values_list('remote_id',flat=True))
-                curr_polys = MapPolygon.objects.filter(dataset_id__exact=dataset_id).exclude(mpoly__covers=boundary).exclude(remote_id__in=already_accounted).filter(mpoly__intersects=boundary)
-                for polygon in curr_polys:
-                    if polygon.mpoly.intersection(boundary).area > .5 * polygon.mpoly.area:
-                        poly.add(polygon.remote_id)
+            poly = set(MapPolygon.objects.filter(dataset_id__exact=dataset_id).filter(mpoly__covers=boundary[dist]).exclude(remote_id__in=already_accounted).values_list('remote_id',flat=True))
+            maybe_polys = MapPolygon.objects.filter(dataset_id__exact=dataset_id).exclude(mpoly__covers=boundary[dist]).exclude(remote_id__in=already_accounted).filter(mpoly__intersects=boundary[dist])
+            for polygon in maybe_polys:
+                if polygon.mpoly.intersection(boundary[dist]).area > .5 * polygon.mpoly.area:
+                    poly.add(polygon.remote_id)
             already_accounted = already_accounted | poly
             data_sums[dist_str] = {}
             data_sums[dist_str]['polygon count'] = len(poly)

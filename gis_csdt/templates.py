@@ -5,18 +5,19 @@ from gis_csdt.geometry_tools import circle_as_polygon
 from gis_csdt.filter_tools import neighboring_points
 from django.http import HttpResponse
 from django.contrib.sites.models import Site
+from django.contrib.sites.shortcuts import get_current_site
 from django.contrib.gis.measure import Distance
 from django.contrib.gis.geos import GEOSGeometry, LineString, Polygon
 
 def AroundPointView(request, mappoint_id = None):
-	current_site = Site.objects.get_current()
+	current_site = get_current_site(request) #Site.objects.get_current()
 	context = {'key': GOOGLE_API_KEY,
 			   'zoom_level': 12,
 			   'lat': 1,
 			   'lon': 45,
 			   'width': 500,
 			   'height': 380,
-			   'root': current_site.domain + '/'}
+			   'root': 'http://'+ current_site.domain + '/'}
 	distances = [1,3,5]
 	if 'lat' in request.GET:
 		context['lat'] = request.GET['lat']
@@ -32,8 +33,8 @@ def AroundPointView(request, mappoint_id = None):
 			points=[(a.point.y,a.point.x,a.name) for a in neighboring_points(mappoint,MapPoint.objects.filter(dataset=mappoint.dataset_id),Distance(km=distances[-1]))]
 		except Exception as e:
 			points=[(context['lat'],context['lon'],"")]
-
-	if context['root'] == 'example.com/':
+	print context['root']
+	if context['root'] == 'http://example.com/':
 		context['root'] = 'http://127.0.0.1:8000/'
 	context['circle']=''
 	

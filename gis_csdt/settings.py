@@ -171,7 +171,7 @@ REST_FRAMEWORK = {
     ],
     'PAGINATE_BY': 10,
     'PAGINATE_BY_PARAM':'page_size',
-    'MAX_PAGINATE_BY': 100,
+    'MAX_PAGINATE_BY': 500,
     'EXCEPTION_HANDLER': 'gis_csdt.exceptions.custom_exception_handler',
     'TEST_REQUEST_DEFAULT_FORMAT': 'json'
 }
