@@ -271,10 +271,15 @@ def del_all():
     DataField.objects.all().delete()
 
 import re, string
+def tag_by_keyword(keyword='pizza', dataset=2, tag='pizza'):
+    tag_helper([{'keyword':keyword}],'keyword',dataset,tag)
+
 def tag_by_name(filename='fastfood.json', name_field='Company', dataset=2, tag='fast food'):
     data = json.loads(open(os.path.abspath(os.path.join(os.path.dirname(__file__), 'data/'+filename))).read())
     data = data['data']
+    tag_helper(data, name_field, dataset, tag)
 
+def tag_helper(data, name_field, dataset, tag):
     mps = MapPoint.objects.filter(dataset_id=dataset)
     tags = Tag.objects.filter(dataset_id=dataset).filter(tag=tag)
     if tags.count() > 1:
