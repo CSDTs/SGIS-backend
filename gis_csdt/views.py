@@ -8,15 +8,22 @@ from django.core.paginator import Paginator
 from django.http import HttpResponse, HttpRequest, HttpResponseBadRequest, HttpResponseNotAllowed
 from django.shortcuts import render
 from gis_csdt.filter_tools import filter_request, neighboring_points
-from gis_csdt.models import Dataset, MapElement, MapPoint, Tag, MapPolygon, TagIndiv, DataField, DataElement
-from gis_csdt.serializers import TagCountSerializer, DatasetSerializer, MapPointSerializer, NewTagSerializer, MapPolygonSerializer, CountPointsSerializer, AnalyzeAreaSerializer
+from gis_csdt.models import Dataset, MapElement, MapPoint, Tag, MapPolygon, TagIndiv, DataField, DataElement, Observation, ObservationValue, Sensor
+from gis_csdt.serializers import TagCountSerializer, DatasetSerializer, MapPointSerializer, NewTagSerializer, MapPolygonSerializer, CountPointsSerializer, AnalyzeAreaSerializer, SensedDataSerializer
 #import csv
 from gis_csdt.serializers import TestSerializer
+class SensedDataViewSet(viewsets.ModelViewSet):
+    queryset = ObservationValue.objects.filter()
+    serializer_class = SensedDataSerializer
+
+    #http://www.django-rest-framework.org/api-guide/permissions
+    permission_classes = (permissions.AllowAny,)#(permissions.IsAuthenticatedOrReadOnly)
+
 class TestView(viewsets.ReadOnlyModelViewSet):
     serializer_class = TestSerializer
     model = MapPoint
 
-    def get_queryset(self):\
+    def get_queryset(self):
         return filter_request(self.request.QUERY_PARAMS, 'mappoint')
 
 class PaginatedCSVRenderer (CSVRenderer):

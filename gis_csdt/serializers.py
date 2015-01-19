@@ -1,4 +1,4 @@
-from gis_csdt.models import Dataset, MapElement, MapPoint, Tag, TagIndiv, MapPolygon, DataField, DataElement
+from gis_csdt.models import Dataset, MapElement, MapPoint, Tag, TagIndiv, MapPolygon, DataField, DataElement, Observation, ObservationValue, Sensor
 from gis_csdt.filter_tools import filter_request, neighboring_points, unite_radius_bubbles
 from gis_csdt.geometry_tools import circle_as_polygon
 from gis_csdt.settings import CENSUS_API_KEY
@@ -445,4 +445,61 @@ class AnalyzeAreaSerializer(serializers.ModelSerializer):
                                     except:
                                         continue
 
-        return data_sums
+        return data_sum
+
+class SensorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Sensor
+        fields = ('name','sensor_type')
+    def restore_object(self, attrs, instance=None):
+        try:
+            return Sensor.objects.get(name__iexact=attrs['name'].strip(),sensor_type__iexact=attrs['sensor_type'].strip())
+        except:
+            return Sensor(name=attrs['name'].strip(),sensor_type=attrs['sensor_type'].strip())
+class ObservationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Observation
+        fields = ('mapelement','time','accuracy')
+    def restore_object(self, attrs, instance=None):
+        try:
+            return Observation.objects.get(mapelement_id=attrs['mapelement_id'],time=attrs['time'],accuracy=attrs['accuracy'])
+        except:
+            return Observation(mapelement_id=attrs['mapelement_id'],time=attrs['time'],accuracy=attrs['accuracy'])
+class SensedDataSerializer(serializers.ModelSerializer):
+    sensor_name = serializers.CharField(source='observation__sensor__name')
+    sensor_type = serializers.CharField()
+    mapelement = serializers.IntegerField()
+    time = serializers.DateTimeField()
+    accuracy = serializers.FloatField(required=False)
+    value_name = serializers.CharField(source='name')
+    value = serializers.FloatField(source='value')
+
+    class Meta:
+        model = ObservationValue
+        fields = ('sensor_name','sensor_type','mapelement','time','accuracy','value_name','value')
+
+    def restore_object(self, attrs, instance=None):
+        #check that we have enough info
+        #if not set('sensor_name','sensor_type','mapelement','time','value_name','value').issubset(set(attrs.keys())):
+        #    raise exceptions.ParseError()
+        #find the mappoint
+        try:
+            mp = MapElement.objects.get(id=attrs['mapelement'])
+        except:
+            raise exceptions.ParseError()
+        #find or create the sensor
+        sensor = Sensor.objects.filter(name__iexact=attrs['observation__sensor__name'].strip(),sensor_type__iexact=attrs['sensor_type'].strip())
+        if len(sensor)==0:
+            sensor = Sensor(name=attrs['observation__sensor__name'].strip(),sensor_type=attrs['sensor_type'].strip())
+            sensor.save()
+        else:
+            sensor = sensor[0]
+        #find or create the observation
+        observation = Observation.objects.filter(mapelement_id=mp.id,sensor_id=sensor.id,time__exact=attrs['time'],accuracy__exact=attrs['accuracy'])
+        if len(observation)==0:
+            observation = Observation(mapelement=mp,sensor=sensor,time=attrs['time'],accuracy=attrs['accuracy'])
+            observation.save()
+        else:
+            observation = observation[0]
+        #create the value
+        return ObservationValue(observation=observation,name=attrs['name'].strip(),value=attrs['value'])

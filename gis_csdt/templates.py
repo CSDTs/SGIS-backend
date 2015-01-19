@@ -18,11 +18,17 @@ def AroundPointView(request, mappoint_id = None):
 			   'width': 500,
 			   'height': 380,
 			   'root': 'http://'+ current_site.domain + '/'}
-	distances = [1,3,5]
+	distances = [1]#,3,5]
 	if 'lat' in request.GET:
-		context['lat'] = request.GET['lat']
+		try:
+			context['lat'] = float(request.GET['lat'])
+		except:
+			pass
 	if 'lon' in request.GET:
-		context['lon'] = request.GET['lon']
+		try:
+			context['lon'] = float(request.GET['lon'])
+		except:
+			pass
 	if mappoint_id:
 		try:
 			mappoint = MapPoint.objects.get(id = mappoint_id)
@@ -33,6 +39,8 @@ def AroundPointView(request, mappoint_id = None):
 			points=[(a.point.y,a.point.x,a.name) for a in neighboring_points(mappoint,MapPoint.objects.filter(dataset=mappoint.dataset_id),Distance(km=distances[-1]))]
 		except Exception as e:
 			points=[(context['lat'],context['lon'],"")]
+	else:
+		points=[(context['lat'],context['lon'],"")]
 	print context['root']
 	if context['root'] == 'http://example.com/':
 		context['root'] = 'http://127.0.0.1:8000/'
@@ -40,9 +48,9 @@ def AroundPointView(request, mappoint_id = None):
 	
 	for d in distances:
 		text = ''
-		geometry = circle_as_polygon(lat = points[0][0], lon = points[0][1], distance = Distance(km=d))
+		geometry = circle_as_polygon(lat = points[0][0], lon = points[0][1], distance = Distance(mi=d))
 		for p in points[1:]:
-			geometry = geometry.union(circle_as_polygon(lat = p[0], lon = p[1], distance = Distance(km=d)))
+			geometry = geometry.union(circle_as_polygon(lat = p[0], lon = p[1], distance = Distance(mi=d)))
 		for poly in geometry:
 			text = ''
 			for ring in poly: 

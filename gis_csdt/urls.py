@@ -9,11 +9,12 @@ router.register(r'api-ds', views.DatasetViewSet)
 router.register(r'api-mp', views.MapPointViewSet, base_name = 'mappoint')
 router.register(r'api-newtag', views.NewTagViewSet)
 router.register(r'api-poly', views.MapPolygonViewSet, base_name = 'mappolygon')
-#router.register(r'api-tag', views.TagViewSet)
+router.register(r'api-tag', views.NewTagViewSet)
 router.register(r'api-test', views.TestView)
 router.register(r'api-count', views.CountPointsInPolygonView)#, base_name = 'count_points')
 #router.register(r'api-tag/count', views.TagCountViewSet, base_name = 'tag')
 router.register(r'api-dist', views.AnalyzeAreaAroundPointView)
+router.register(r'api-sensors', views.SensedDataViewSet)
 
 urlpatterns = patterns('',
     url(r'^', include(router.urls)),

@@ -275,6 +275,24 @@ class DataField(models.Model):
 	def __unicode__(self):
 		return self.field_en + ', id:' + str(self.id) + ', dataset:' + str(self.dataset_id)
 
+class Sensor(models.Model):
+	name = models.CharField(max_length=100)
+	sensor_type = models.CharField(max_length=100)
+
+class Observation(models.Model):
+	mapelement = models.ForeignKey(MapElement, related_name='observations')
+	time = models.DateTimeField(null=True)
+	sensor = models.ForeignKey(Sensor)
+	accuracy = models.FloatField(null=True)
+
+class ObservationValue(models.Model):
+	observation = models.ForeignKey(Observation, related_name = 'values')
+	name = models.CharField(max_length='50',blank=True)
+	value = models.FloatField()
+	
+	class Meta:
+ 		unique_together = (("observation", "name"),)
+
 class DataElement(models.Model):
 	datafield = models.ForeignKey(DataField, related_name = 'dataElements')
 	mapelement = models.ForeignKey(MapElement)
