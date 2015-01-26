@@ -42,8 +42,8 @@ def AroundPointView(request, mappoint_id = None):
 	else:
 		distances = get_distances(None)
 
-	if 'unit' in request.GET and request.GET['unit'] == 'mi':
-		unit = 'mi'
+	if 'unit' in request.GET and request.GET['unit'] in ['mi', 'm']:
+		unit = request.GET['unit']
 	else:
 		unit = 'km'
 
