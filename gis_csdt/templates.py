@@ -9,6 +9,12 @@ from django.contrib.sites.shortcuts import get_current_site
 from django.contrib.gis.measure import Distance
 from django.contrib.gis.geos import GEOSGeometry, LineString, Polygon
 
+def get_distances(input):
+	try:
+		return [float(i.strip()) for i in input.split(',')]
+	except:
+		return [1,3,5]
+
 def AroundPointView(request, mappoint_id = None):
 	current_site = get_current_site(request) #Site.objects.get_current()
 	context = {'key': GOOGLE_API_KEY,
@@ -18,7 +24,6 @@ def AroundPointView(request, mappoint_id = None):
 			   'width': 500,
 			   'height': 380,
 			   'root': 'http://'+ current_site.domain + '/'}
-	distances = [1]#,3,5]
 	if 'lat' in request.GET:
 		try:
 			context['lat'] = float(request.GET['lat'])
@@ -29,6 +34,19 @@ def AroundPointView(request, mappoint_id = None):
 			context['lon'] = float(request.GET['lon'])
 		except:
 			pass
+
+	if 'distances' in request.GET:
+		distances= get_distances(request.GET['distances'])
+	elif 'distance' in request.GET:
+		distances= get_distances(request.GET['distance'])
+	else:
+		distances = get_distances(None)
+
+	if 'unit' in request.GET and request.GET['unit'] == 'mi':
+		unit = 'mi'
+	else:
+		unit = 'km'
+
 	if mappoint_id:
 		try:
 			mappoint = MapPoint.objects.get(id = mappoint_id)
@@ -48,9 +66,11 @@ def AroundPointView(request, mappoint_id = None):
 	
 	for d in distances:
 		text = ''
-		geometry = circle_as_polygon(lat = points[0][0], lon = points[0][1], distance = Distance(mi=d))
+		dist_kwargs = {unit:d}
+		dist = Distance(**dist_kwargs)
+		geometry = circle_as_polygon(lat = points[0][0], lon = points[0][1], distance = dist)
 		for p in points[1:]:
-			geometry = geometry.union(circle_as_polygon(lat = p[0], lon = p[1], distance = Distance(mi=d)))
+			geometry = geometry.union(circle_as_polygon(lat = p[0], lon = p[1], distance = dist))
 		for poly in geometry:
 			text = ''
 			for ring in poly: 
