@@ -56,8 +56,11 @@ class NewTagSerializer(serializers.ModelSerializer):
         if ',' in attrs['tag']:
             return None
         attrs['tag'] = attrs['tag'].strip().lower()
+        try: ##this part is temporary, allows to post tag by ID #
+            tags = Tag.objects.filter(dataset = mp.dataset, id = int(attrs['tag']))
+        except:
+            tags = Tag.objects.filter(dataset = mp.dataset, tag = attrs['tag'])
 
-        tags = Tag.objects.filter(dataset = mp.dataset, tag = attrs['tag'])
         len_tags = len(tags)
         if len_tags == 0:
             tag = Tag(dataset = mp.dataset, tag = attrs['tag'])
