@@ -1,25 +1,46 @@
 from rest_framework import views, viewsets, permissions, response, pagination
 from rest_framework.settings import api_settings
 from rest_framework_csv.renderers import CSVRenderer
+from rest_framework.exceptions import APIException, ParseError
 from django.contrib.gis.db.models import Count
 from django.contrib.gis.geos import Polygon, Point
 from django.contrib.gis.measure import Distance, Area
 from django.core.paginator import Paginator
-from django.http import HttpResponse, HttpRequest, HttpResponseBadRequest, HttpResponseNotAllowed
+from django.http import HttpResponse, HttpRequest,  HttpResponseNotAllowed
 from django.shortcuts import render
 from gis_csdt.filter_tools import filter_request, neighboring_points
 from gis_csdt.models import Dataset, MapElement, MapPoint, Tag, MapPolygon, TagIndiv, DataField, DataElement, Observation, ObservationValue, Sensor
 from gis_csdt.serializers import TagCountSerializer, DatasetSerializer, MapPointSerializer, NewTagSerializer, MapPolygonSerializer, CountPointsSerializer, AnalyzeAreaSerializer, SensedDataSerializer
 #import csv
 from gis_csdt.serializers import TestSerializer
-class SensedDataViewSet(viewsets.ModelViewSet):
+
+###constants for pagination
+PAGINATE_BY_CONST = 10
+PAGINATE_BY_PARAM_CONST = 'page_size'
+MAX_PAGINATE_BY_CONST = 500
+###classes for pagination
+class PaginatedModelViewSet(viewsets.ModelViewSet):
+    paginate_by = PAGINATE_BY_CONST
+    paginate_by_param = PAGINATE_BY_PARAM_CONST
+    max_paginate_by = MAX_PAGINATE_BY_CONST
+class PaginatedReadOnlyModelViewSet(viewsets.ReadOnlyModelViewSet):
+    paginate_by = PAGINATE_BY_CONST
+    paginate_by_param = PAGINATE_BY_PARAM_CONST
+    max_paginate_by = MAX_PAGINATE_BY_CONST
+########
+
+
+class SensedDataViewSet(PaginatedModelViewSet):
+    paginate_by = PAGINATE_BY_CONST
+    paginate_by_param = PAGINATE_BY_PARAM_CONST
+    max_paginate_by = MAX_PAGINATE_BY_CONST
     queryset = ObservationValue.objects.filter()
     serializer_class = SensedDataSerializer
 
     #http://www.django-rest-framework.org/api-guide/permissions
     permission_classes = (permissions.AllowAny,)#(permissions.IsAuthenticatedOrReadOnly)
 
-class TestView(viewsets.ReadOnlyModelViewSet):
+class TestView(PaginatedReadOnlyModelViewSet):
     serializer_class = TestSerializer
     model = MapPoint
 
@@ -34,39 +55,39 @@ class PaginatedCSVRenderer (CSVRenderer):
             data = data.get(self.results_field, [])
         return super(PaginatedCSVRenderer, self).render(data, media_type, renderer_context)
 
-class NewTagViewSet(viewsets.ModelViewSet):
+class NewTagViewSet(PaginatedModelViewSet):
     queryset = TagIndiv.objects.filter(tag__approved=True).distinct('tag')
     serializer_class = NewTagSerializer
 
     #http://www.django-rest-framework.org/api-guide/permissions
     permission_classes = (permissions.AllowAny,)#(permissions.IsAuthenticatedOrReadOnly)
 
-class TagCountViewSet(viewsets.ReadOnlyModelViewSet):
+class TagCountViewSet(PaginatedReadOnlyModelViewSet):
     serializer_class = TagCountSerializer
     model = Tag
 
     def get_queryset(self):
         return Tag.objects.filter(approved = True).values('dataset','tag').annotate(num_tags = Count('id'))
 
-class DatasetViewSet(viewsets.ReadOnlyModelViewSet):
+class DatasetViewSet(PaginatedReadOnlyModelViewSet):
     queryset = Dataset.objects.all()
     serializer_class = DatasetSerializer
 
-class MapPointViewSet(viewsets.ReadOnlyModelViewSet):
+class MapPointViewSet(PaginatedReadOnlyModelViewSet):
     serializer_class = MapPointSerializer
     model = MapPoint
 
     def get_queryset(self):
         return filter_request(self.request.QUERY_PARAMS, 'mappoint')
 
-class MapPolygonViewSet(viewsets.ReadOnlyModelViewSet):
+class MapPolygonViewSet(PaginatedReadOnlyModelViewSet):
     serializer_class = MapPolygonSerializer
     model = MapPolygon
 
     def get_queryset(self):
         return filter_request(self.request.QUERY_PARAMS, 'mappolygon')
 
-class CountPointsInPolygonView(viewsets.ReadOnlyModelViewSet):
+class CountPointsInPolygonView(PaginatedReadOnlyModelViewSet):
     renderer_classes = api_settings.DEFAULT_RENDERER_CLASSES + [PaginatedCSVRenderer]
     serializer_class = CountPointsSerializer
     model = MapPolygon
@@ -156,7 +177,7 @@ class CountPointsInPolygonView(viewsets.ReadOnlyModelViewSet):
                 writer.writerow(row)
             return csv_response
 
-class AnalyzeAreaAroundPointView(viewsets.ReadOnlyModelViewSet):
+class AnalyzeAreaAroundPointView(PaginatedReadOnlyModelViewSet):
     renderer_classes = api_settings.DEFAULT_RENDERER_CLASSES + [PaginatedCSVRenderer]
     serializer_class = AnalyzeAreaSerializer
     model = MapPoint
@@ -168,18 +189,21 @@ class AnalyzeAreaAroundPointView(viewsets.ReadOnlyModelViewSet):
         for (param, result) in self.request.QUERY_PARAMS.items():
             if param in ['max_lat','min_lat','max_lon','min_lon','dataset','tags','tag']:
                 mappoint_params[param] = result
+        #if none of this is specified, this is just too much
+        if len(mappoint_params) == 0:
+            raise ParseError('Too many results. Please restrict the mappoints.')
         #now get the queryset
         points = filter_request(mappoint_params,'mappoint')
         distances = self.request.GET.getlist('distance')
         unit = self.request.GET.getlist('unit')
         if len(unit) > 1:
-            return HttpResponseBadRequest('No more than one unit may be specified.')
+            raise ParseError('No more than one unit may be specified.')
         elif len(unit) == 0:
             unit = 'mi'
         elif unit[0] in ['m','km','mi']:
             unit = unit[0]
         else:
-            return HttpResponseBadRequest('Accepted units: m, km, mi')
+            raise ParseError('Accepted units: m, km, mi')
         if len(distances) == 0:
             distances = [1,3,5]
             unit = 'km'
