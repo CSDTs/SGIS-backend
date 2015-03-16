@@ -1,7 +1,7 @@
 from rest_framework import views, viewsets, permissions, response, pagination
 from rest_framework.settings import api_settings
 from rest_framework_csv.renderers import CSVRenderer
-from rest_framework.exceptions import APIException, ParseError
+from rest_framework.exceptions import ParseError #, APIException
 from django.contrib.gis.db.models import Count
 from django.contrib.gis.geos import Polygon, Point
 from django.contrib.gis.measure import Distance, Area
