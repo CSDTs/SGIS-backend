@@ -85,7 +85,7 @@ class DatasetSerializer(serializers.ModelSerializer):
     count = serializers.SerializerMethodField()
     def get_tags(self, dataset):
         #build nested distinct list
-        return Tag.objects.filter(approved=True, dataset=dataset).order_by('-count').values_list('tag',flat=True)
+        return Tag.objects.filter(approved=True, dataset=dataset).order_by('-count').values('id','tag')#.values_list('tag',flat=True)
     def get_count(self, dataset):
         #build nested distinct list
         return MapElement.objects.filter(dataset=dataset).count()
