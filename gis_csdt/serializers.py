@@ -12,7 +12,7 @@ from django import VERSION as DJANGO_VERSION
 import copy, json, urllib
 
 CIRCLE_EDGES = 12 #number of edges on polygon estimation of a circle
-if DJANGO_VERSION[0] >= 1 and DJANGO_VERSION[1] >= 6:
+if DJANGO_VERSION[0] >= 1 and DJANGO_VERSION[1] >= 7:
     def get_function(function_name):
         if function_name[:4] == 'get_':
             return
