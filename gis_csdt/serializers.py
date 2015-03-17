@@ -8,9 +8,17 @@ from django.contrib.gis.measure import Distance, Area
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Sum, Count
 from django.http import HttpResponse, HttpRequest, HttpResponseBadRequest, HttpResponseNotAllowed
+from django import VERSION as DJANGO_VERSION
 import copy, json, urllib
 
 CIRCLE_EDGES = 12 #number of edges on polygon estimation of a circle
+if DJANGO_VERSION[0] >= 1 and DJANGO_VERSION[1] >= 6:
+    def get_function(function_name):
+        if function_name[:4] == 'get_':
+            return
+else:
+    def get_function(function_name):
+        return function_name
 
 '''class TagSerializer(serializers.ModelSerializer):
     def __init__(self, *args, **kwargs):
@@ -81,8 +89,8 @@ class TagCountSerializer(serializers.HyperlinkedModelSerializer):
         fields = ['dataset','tag','count']
 
 class DatasetSerializer(serializers.ModelSerializer):
-    tags = serializers.SerializerMethodField()
-    count = serializers.SerializerMethodField()
+    tags = serializers.SerializerMethodField(get_function('get_tags'))
+    count = serializers.SerializerMethodField(get_function('get_count'))
     def get_tags(self, dataset):
         #build nested distinct list
         return Tag.objects.filter(approved=True, dataset=dataset).order_by('-count').values('id','tag')#.values_list('tag',flat=True)
@@ -107,7 +115,7 @@ class MapPointSerializer(serializers.HyperlinkedModelSerializer):
     field2 = serializers.CharField(source = 'mappoint.field2')
     field3 = serializers.CharField(source = 'mappoint.field3')
 
-    tags = serializers.SerializerMethodField()
+    tags = serializers.SerializerMethodField(get_function('get_tags'))
     def get_tags(self, mappoint):
         #build nested distinct list
         return Tag.objects.filter(approved=True, tagindiv__mapelement=mappoint).distinct('id','tag').values_list('tag',flat=True)
@@ -128,7 +136,7 @@ class TestSerializer(gis_serializers.GeoFeatureModelSerializer):
     field2 = serializers.CharField(source = 'mappoint.field2')
     field3 = serializers.CharField(source = 'mappoint.field3')
 
-    tags = serializers.SerializerMethodField()
+    tags = serializers.SerializerMethodField(get_function('get_tags'))
     def get_tags(self, mappoint):
         #build nested distinct list
         return Tag.objects.filter(approved=True, tagindiv__mapelement=mappoint).distinct('tag').values_list('tag',flat=True)
@@ -147,7 +155,7 @@ class MapPolygonSerializer(gis_serializers.GeoFeatureModelSerializer):
     
     mpoly = gis_serializers.GeometryField(source = 'mappolygon.mpoly')
 
-    tags = serializers.SerializerMethodField()
+    tags = serializers.SerializerMethodField(get_function('get_tags'))
 
     def get_tags(self, mappolygon):
         #build nested distinct list
@@ -161,13 +169,13 @@ class MapPolygonSerializer(gis_serializers.GeoFeatureModelSerializer):
 
 class CountPointsSerializer(serializers.ModelSerializer):
     polygon_id = serializers.IntegerField(source = 'remote_id')
-    count = serializers.SerializerMethodField('count_points')
+    count = serializers.SerializerMethodField(get_function('get_count'))
 
     class Meta:
         model = MapPolygon
         fields = ('polygon_id','count')
 
-    def count_points(self, mappolygon):
+    def get_count(self, mappolygon):
         request = self.context.get('request', None)
         params = copy.deepcopy(request.QUERY_PARAMS)
         for key in ['max_lat','min_lat','max_lon','min_lon','state']:
@@ -241,8 +249,8 @@ class AnalyzeAreaSerializer(serializers.ModelSerializer):
     field2 = serializers.CharField(source = 'mappoint.field2')
     field3 = serializers.CharField(source = 'mappoint.field3')
 
-    tags = serializers.SerializerMethodField()
-    areaAroundPoint = serializers.SerializerMethodField()
+    tags = serializers.SerializerMethodField(get_function('get_tags'))
+    areaAroundPoint = serializers.SerializerMethodField(get_function('get_areaAroundPoint'))
 
     class Meta:
         model = MapPoint 
