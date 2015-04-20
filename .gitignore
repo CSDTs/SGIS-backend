@@ -9,3 +9,4 @@ eclipse/
 python/
 gis_csdt/data/*
 gis_csdt/migrations/*
+gis_csdt/local_settings.py

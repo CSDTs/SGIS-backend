@@ -42,6 +42,10 @@ def filter_request(parameters, model_type):
     else:
         queryset = MapElement.objects
 
+    if 'remote_id' in parameters:
+        queryset = queryset.filter(remote_id=parameters['remote_id'])
+
+
     if 'dataset' in parameters:
         dataset_list = parameters['dataset'].strip().split(',')
         if type(dataset_list) is not list:
@@ -108,13 +112,15 @@ def filter_request(parameters, model_type):
     return queryset.distinct()
 
 def neighboring_points(point, queryset, distance):
+    distance = distance * 2
     all_points=queryset.filter(point__distance_lte=(point.point,distance)).distinct()
-    point_set = set(all_points.values_list('point',flat=True))
+    point_set = list(all_points)#.values_list('point',flat=True))
+    print point_set
     for p in point_set:
-        new_points = queryset.filter(point__distance_lte=(p,distance))
-        all_points = all_points | new_points.distinct()
-        point_set.union(set(new_points.values_list('point',flat=True)))
-    return all_points
+        new_points = queryset.filter(point__distance_lte=(p.point,distance)).exclude(id__in=[x.id for x in point_set]).distinct()
+        all_points = all_points | new_points
+        point_set.extend(list(new_points))#.values_list('point',flat=True)))
+    return all_points.distinct()
 
 def unite_radius_bubbles(points, distances):
     geometry = {}

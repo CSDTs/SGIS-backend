@@ -93,7 +93,7 @@ class DatasetSerializer(serializers.ModelSerializer):
     count = serializers.SerializerMethodField(get_function('get_count'))
     def get_tags(self, dataset):
         #build nested distinct list
-        return Tag.objects.filter(approved=True, dataset=dataset).order_by('-count').values('id','tag')#.values_list('tag',flat=True)
+        return Tag.objects.filter(approved=True, dataset=dataset).order_by('-count').values_list('tag',flat=True)
     def get_count(self, dataset):
         #build nested distinct list
         return MapElement.objects.filter(dataset=dataset).count()
@@ -380,7 +380,7 @@ class AnalyzeAreaSerializer(serializers.ModelSerializer):
             dist_objs.append(Distance(**kwargs))
 
         all_points = neighboring_points(mappoint, MapPoint.objects.filter(dataset=mappoint.dataset_id), dist_objs[-1])
-        print all_points
+        #print all_points
 
         #variables = ['Total Population','Area (km2)','Total (Race)', 'White Only', 'African American', 'Hispanic','Asian/Pacific Islander', 'Native American','Total (Poverty)','below 1.00', 'weighted mean of median household income','Mean Housing Value']
         #variables = {'B02001_001E':{},'B02001_002E':{},'B02009_001E':{},'B03001_001E':{},'B03001_003E':{},'B02011_001E':{}, 'B02012_001E':{},'B02010_001E':{},'B05010_001E':{},'B05010_002E':{},'B19061_001E':{},'B25105_001E':{},'B25077_001E':{},'B25077_001E':{}}
@@ -519,3 +519,104 @@ class SensedDataSerializer(serializers.ModelSerializer):
             observation = observation[0]
         #create the value
         return ObservationValue(observation=observation,name=attrs['name'].strip(),value=attrs['value'])
+
+
+
+class AnalyzeAreaNoValuesSerializer(serializers.ModelSerializer):
+    point_id = serializers.CharField(source = 'mappoint.id')
+    areaAroundPoint = serializers.SerializerMethodField(get_function('get_areaAroundPoint'))
+
+    class Meta:
+        model = MapPoint 
+        fields = ('point_id','areaAroundPoint')
+
+
+    def get_tags(self, mappoint):
+        #build nested distinct list
+        return Tag.objects.filter(approved=True, tagindiv__mapelement=mappoint).distinct('tag').values('tag')
+    
+    def get_areaAroundPoint(self, mappoint):
+        request = self.context.get('request', None)
+        years = request.GET.getlist('year')
+        datasets = Dataset.objects.filter(name__icontains='census')
+        if len(years) > 0:
+            d = Dataset.objects.none()
+            for y in years:
+                d = d | datasets.filter(name__contains=y.strip())
+            datasets = d
+        if len(datasets) == 0:
+            return {}
+        else:
+            dataset_id = datasets[0].id
+
+        ### DISTANCES
+        distances = request.GET.getlist('distance')
+        unit = request.GET.getlist('unit')
+        if len(unit) > 1:
+            return HttpResponseBadRequest('No more than one unit may be specified.')
+        elif len(unit) == 0:
+            unit = 'mi'
+        elif unit[0] in ['m','km','mi']:
+            unit = unit[0]
+        else:
+            return HttpResponseBadRequest('Accepted units: m, km, mi')
+        if len(distances) == 0:
+            distances = [1,3,5]
+            unit = 'km'
+        else:
+            distances.sort()
+
+        dist_objs = []
+        for dist in distances:
+            kwargs = {unit: dist}
+            dist_objs.append(Distance(**kwargs))
+
+        all_points = neighboring_points(mappoint, MapPoint.objects.filter(dataset_id=mappoint.dataset_id), dist_objs[-1])
+        #print len(all_points), all_points
+        data_sums = {'points':[], 'view url':'http://127.0.0.1:8000/around-point/%d/' %(all_points[0].id)}
+        for p in all_points:
+            data_sums['points'].append({'id':p.id,
+                                        'name':p.name, 
+                                        'street':p.mappoint.street, 
+                                        'city':p.mappoint.city, 
+                                        'state':p.mappoint.state, 
+                                        'zipcode':p.mappoint.zipcode, 
+                                        'county':p.mappoint.county, 
+                                        'field1':p.mappoint.field1, 
+                                        'field2':p.mappoint.field2, 
+                                        'field3':p.mappoint.field3, 
+                                        'tags':Tag.objects.filter(approved=True, tagindiv__mapelement=mappoint).distinct('tag').values('tag')})
+        already_accounted = set()
+        boundary = unite_radius_bubbles(all_points,dist_objs)
+        for dist in dist_objs:
+            if unit == 'm':
+                dist_str = '%f m' %(dist.m)
+            elif unit == 'km':
+                dist_str = '%f km' %(dist.km)
+            elif unit == 'mi':
+                dist_str = '%f mi' %(dist.mi)
+            temp_qs = MapPolygon.objects.filter(dataset_id__exact=dataset_id).filter(mpoly__coveredby=boundary[dist]).exclude(remote_id__in=already_accounted).distinct()
+            poly = set(temp_qs.values_list('remote_id',flat=True))
+            try:
+                land_area = sum([int(x) for x in temp_qs.values_list('field1',flat=True)])
+            except:
+                continue
+            #print 'poly', poly
+            maybe_polys = MapPolygon.objects.filter(dataset_id__exact=dataset_id).exclude(remote_id__in=poly).exclude(remote_id__in=already_accounted).filter(mpoly__intersects=boundary[dist]).distinct()
+            #print 'maybes', maybe_polys.values_list('remote_id',flat=True)
+            for polygon in maybe_polys:
+                if polygon.mpoly.intersection(boundary[dist]).area > .5 * polygon.mpoly.area:
+                    poly.add(polygon.remote_id)
+                    try:
+                        land_area += int(polygon.field1)
+                    except:
+                        continue
+            already_accounted = already_accounted | poly
+            data_sums[dist_str] = {}
+            # data_sums[dist_str]['polygon count'] = len(poly)
+            # data_sums[dist_str]['land area (m2)'] = sum([int(i) for i in MapPolygon.objects.filter(dataset_id__exact=dataset_id,remote_id__in=poly).values_list('field1',flat=True)])
+            if len(poly) > 0:
+                data_sums[dist_str]['polygons'] = list(poly)
+                data_sums[dist_str]['land_area'] = land_area
+
+        return data_sums

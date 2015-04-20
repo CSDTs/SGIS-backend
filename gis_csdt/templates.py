@@ -47,6 +47,8 @@ def AroundPointView(request, mappoint_id = None):
 	else:
 		unit = 'km'
 
+	dataset = 0
+
 	if mappoint_id:
 		try:
 			mappoint = MapPoint.objects.get(id = mappoint_id)
@@ -55,6 +57,7 @@ def AroundPointView(request, mappoint_id = None):
 			if mappoint.point.y != 0:
 				context['lat'] = mappoint.point.y
 			points=[(a.point.y,a.point.x,a.name) for a in neighboring_points(mappoint,MapPoint.objects.filter(dataset=mappoint.dataset_id),Distance(km=distances[-1]))]
+			dataset = mappoint.dataset_id
 		except Exception as e:
 			points=[(context['lat'],context['lon'],"")]
 	else:
@@ -92,17 +95,6 @@ def AroundPointView(request, mappoint_id = None):
 	<script>
 	var map;
 	function initialize() {
-		function add_markers(){
-		  	var centers = {{ points }};
-		  	var names = {{ names|safe }};
-		  	for (var i=0;i<centers.length;i++){
-		  		var marker = new google.maps.Marker({
-				    position: centers[i],
-				    title: names[i]
-				});
-				marker.setMap(map);
-		  	}
-		}
 		function add_polygons(){
 		  var polygon = new google.maps.Polygon({
 		    paths: {{ circle }},
@@ -126,22 +118,49 @@ def AroundPointView(request, mappoint_id = None):
 			center: {lat: {{ lat }}, lng:{{ lon }}}
 		});
   		add_polygons();
-  		add_markers();
 	  // Load a GeoJSON from the same server as our demo.
 	  google.maps.event.addListener(map, 'bounds_changed', function() {
 	  	load_polys("{{ root }}api-poly/?max_lat=" + map.getBounds().getNorthEast().lat() + "&max_lon=" + map.getBounds().getNorthEast().lng() + "&min_lat=" + map.getBounds().getSouthWest().lat() + "&min_lon="+ map.getBounds().getSouthWest().lng());
+  		add_markers("{{ root }}api-mp/?dataset=" + {{ dataset }} +"&max_lat=" + map.getBounds().getNorthEast().lat() + "&max_lon=" + map.getBounds().getNorthEast().lng() + "&min_lat=" + map.getBounds().getSouthWest().lat() + "&min_lon="+ map.getBounds().getSouthWest().lng());
 
+
+		function add_markers(json_next) {
+			$.getJSON(json_next)
+				.done(function(data){
+				  	for (var i=0;i<data.results.length;i++){
+				  		var marker = new google.maps.Marker({
+						    position: new google.maps.LatLng(data.results[i].latitude, data.results[i].longitude),
+						    title: data.results[i].name
+						});
+						marker.setMap(map);
+				  	}
+
+					json_next = data.next;
+					if (data.next != null){
+						load_polys(data.next);
+					} 
+					
+				});
+		  	var centers = {{ points }};
+		  	var names = {{ names|safe }};
+		  	for (var i=0;i<centers.length;i++){
+		  		var marker = new google.maps.Marker({
+				    position: centers[i],
+				    title: names[i]
+				});
+				marker.setMap(map);
+		  	}
+		}
 		
 		function load_polys(json_next) {
 			$.getJSON(json_next)
 			.done(function(data){
-				for (var i = 0; i < data.results.length; i++){
-					map.data.addGeoJson(data.results[i]);
-				}
+				map.data.addGeoJson(data.results);
 				json_next = data.next;
 				if (data.next != null){
 					load_polys(data.next);
-				}
+				} 
+				
 			});
 		}	
 		var featureStyle = {

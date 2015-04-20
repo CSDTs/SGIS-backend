@@ -10,7 +10,7 @@ from django.http import HttpResponse, HttpRequest,  HttpResponseNotAllowed
 from django.shortcuts import render
 from gis_csdt.filter_tools import filter_request, neighboring_points
 from gis_csdt.models import Dataset, MapElement, MapPoint, Tag, MapPolygon, TagIndiv, DataField, DataElement, Observation, ObservationValue, Sensor
-from gis_csdt.serializers import TagCountSerializer, DatasetSerializer, MapPointSerializer, NewTagSerializer, MapPolygonSerializer, CountPointsSerializer, AnalyzeAreaSerializer, SensedDataSerializer
+from gis_csdt.serializers import TagCountSerializer, DatasetSerializer, MapPointSerializer, NewTagSerializer, MapPolygonSerializer, CountPointsSerializer, AnalyzeAreaSerializer, AnalyzeAreaNoValuesSerializer, SensedDataSerializer
 #import csv
 from gis_csdt.serializers import TestSerializer
 
@@ -216,3 +216,44 @@ class AnalyzeAreaAroundPointView(PaginatedReadOnlyModelViewSet):
                 continue
             take_out.extend(neighboring_points(point, points, Distance(**kwargs)).exclude(id=point.id).values_list('id',flat=True))
         return points.exclude(id__in=take_out)
+
+class AnalyzeAreaAroundPointNoValuesView(PaginatedReadOnlyModelViewSet):
+    serializer_class = AnalyzeAreaNoValuesSerializer
+    model = MapPoint
+    permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
+
+    def get_queryset(self):
+        #split params by which it applies to
+        mappoint_params = {}
+        for (param, result) in self.request.QUERY_PARAMS.items():
+            if param in ['max_lat','min_lat','max_lon','min_lon','dataset','tags','tag','state','zipcode']:
+                mappoint_params[param] = result
+        #if none of this is specified, this is just too much
+        if len(mappoint_params) == 0:
+            raise ParseError('Too many results. Please restrict the mappoints.')
+        #now get the queryset
+        points = filter_request(mappoint_params,'mappoint')
+        distances = self.request.GET.getlist('distance')
+        unit = self.request.GET.getlist('unit')
+        if len(unit) > 1:
+            raise ParseError('No more than one unit may be specified.')
+        elif len(unit) == 0:
+            unit = 'mi'
+        elif unit[0] in ['m','km','mi']:
+            unit = unit[0]
+        else:
+            raise ParseError('Accepted units: m, km, mi')
+        if len(distances) == 0:
+            distances = [1,3,5]
+            unit = 'km'
+        else:
+            print distances
+            distances.sort()
+        kwargs = {unit:distances[-1]}
+        take_out = []
+        for point in points:
+            if point.id in take_out:
+                continue
+            take_out.extend(neighboring_points(point, points, Distance(**kwargs)).exclude(id=point.id).values_list('id',flat=True))
+        return points.exclude(id__in=take_out).distinct()
+
