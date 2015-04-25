@@ -21,15 +21,6 @@ else:
     def get_function(function_name):
         return function_name
 
-class CustomGeoFeatureModelSerializer(gis_serializers.GeoFeatureModelSerializer):
-    def __init__(self, *args, **kwargs):
-        super(CustomGeoFeatureModelSerializer, self).__init__(*args, **kwargs)
-    def to_representation(self, instance):
-        if hasattr(instance,'mappolygon'):
-            self.Meta.geo_field = 'mpoly'
-        super(CustomGeoFeatureModelSerializer, self).to_representation(instance)
-
-
 '''class TagSerializer(serializers.ModelSerializer):
     def __init__(self, *args, **kwargs):
         many = kwargs.pop('many', True)
@@ -179,7 +170,7 @@ class TestSerializer(gis_serializers.GeoFeatureModelSerializer):
         return json.loads(GEOSGeometry(mapelement.point).geojson)
 
     class Meta:
-        id_field = False
+        id_field = 'id'
         geo_field = 'geom'
         model = MapElement 
         fields = ('dataset','id','name','address','data','tags')
