@@ -15,7 +15,7 @@ from gis_csdt.serializers import TagCountSerializer, DatasetSerializer, MapPoint
 from gis_csdt.serializers import TestSerializer
 
 ###constants for pagination
-PAGINATE_BY_CONST = 10
+PAGINATE_BY_CONST = 100
 PAGINATE_BY_PARAM_CONST = 'page_size'
 MAX_PAGINATE_BY_CONST = 500
 ###classes for pagination
@@ -42,10 +42,10 @@ class SensedDataViewSet(PaginatedModelViewSet):
 
 class TestView(PaginatedReadOnlyModelViewSet):
     serializer_class = TestSerializer
-    model = MapPoint
+    model = MapElement
 
     def get_queryset(self):
-        return filter_request(self.request.QUERY_PARAMS, 'mappoint')
+        return filter_request(self.request.QUERY_PARAMS, 'mapelement')
 
 class PaginatedCSVRenderer (CSVRenderer):
     results_field = 'results'

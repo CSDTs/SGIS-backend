@@ -2,6 +2,7 @@ from django.contrib.gis.geos import Polygon, Point
 from gis_csdt.geometry_tools import circle_as_polygon
 from gis_csdt.models import Dataset, MapElement, MapPoint, Tag, MapPolygon, TagIndiv, DataField, DataElement
 from django.contrib.gis.measure import Distance
+from django.db.models import Q
 
 def filter_request(parameters, model_type):
 
@@ -58,8 +59,9 @@ def filter_request(parameters, model_type):
                 queryset = queryset.filter(dataset__name__icontains = dataset)
 
     #make it just one type now
-    kwargs = {model_type:None}
-    queryset = queryset.exclude(**kwargs)
+    if model_type != 'mapelement':
+        kwargs = {model_type:None}
+        queryset = queryset.exclude(**kwargs)
 
     if model_type == 'mappoint':
         if 'street' in parameters:
@@ -90,6 +92,8 @@ def filter_request(parameters, model_type):
             queryset = queryset.filter(point__within=geom)
         elif model_type == 'mappolygon':
             queryset = queryset.filter(mappolygon__mpoly__bboverlaps=geom)
+        elif model_type == 'mapelement':
+            queryset = queryset.filter((~Q(mappoint=None) & Q(point__within=geom)) | (~Q(mappolygon=None) & Q(mappolygon__mpoly__bboverlaps=geom)))
 
     if 'radius' in parameters and 'center' in parameters:
         try:

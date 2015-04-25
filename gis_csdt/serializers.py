@@ -5,6 +5,7 @@ from gis_csdt.settings import CENSUS_API_KEY
 from rest_framework import serializers, exceptions
 from rest_framework_gis import serializers as gis_serializers
 from django.contrib.gis.measure import Distance, Area
+from django.contrib.gis.geos import GEOSGeometry
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Sum, Count
 from django.http import HttpResponse, HttpRequest, HttpResponseBadRequest, HttpResponseNotAllowed
@@ -19,6 +20,15 @@ if DJANGO_VERSION[0] >= 1 and DJANGO_VERSION[1] >= 7:
 else:
     def get_function(function_name):
         return function_name
+
+class CustomGeoFeatureModelSerializer(gis_serializers.GeoFeatureModelSerializer):
+    def __init__(self, *args, **kwargs):
+        super(CustomGeoFeatureModelSerializer, self).__init__(*args, **kwargs)
+    def to_representation(self, instance):
+        if hasattr(instance,'mappolygon'):
+            self.Meta.geo_field = 'mpoly'
+        super(CustomGeoFeatureModelSerializer, self).to_representation(instance)
+
 
 '''class TagSerializer(serializers.ModelSerializer):
     def __init__(self, *args, **kwargs):
@@ -127,25 +137,52 @@ class MapPointSerializer(serializers.HyperlinkedModelSerializer):
         fields = ('dataset','id','name','latitude','longitude','street','city','state','zipcode','county','field1','field2','field3','tags')
 
 class TestSerializer(gis_serializers.GeoFeatureModelSerializer):
-    street = serializers.CharField(source = 'mappoint.street')
-    city = serializers.CharField(source = 'mappoint.city')
-    state = serializers.CharField(source = 'mappoint.state')
-    zipcode = serializers.CharField(source = 'mappoint.zipcode')
-    county = serializers.CharField(source = 'mappoint.county')
-    field1 = serializers.CharField(source = 'mappoint.field1')
-    field2 = serializers.CharField(source = 'mappoint.field2')
-    field3 = serializers.CharField(source = 'mappoint.field3')
-
+    address = serializers.SerializerMethodField(get_function('get_address'))
+    data = serializers.SerializerMethodField(get_function('get_data'))
     tags = serializers.SerializerMethodField(get_function('get_tags'))
-    def get_tags(self, mappoint):
+    geom = serializers.SerializerMethodField(get_function('get_geom'))
+
+    def get_address(self, mapelement):
+        if hasattr(mapelement,'mappoint'):
+            return {'street':mapelement.mappoint.street,'city':mapelement.mappoint.city,'state':mapelement.mappoint.state,'zipcode':mapelement.mappoint.zipcode,'county':mapelement.mappoint.county}
+        return {}
+
+    def get_data(self, mapelement):
+        data = {}
+        child = mapelement.mappoint if hasattr(mapelement,'mappoint') else mapelement.mappolygon
+        dataset = Dataset.objects.get(id=mapelement.dataset_id)
+        dataelements = DataElement.objects.filter(mapelement_id=mapelement.id)
+
+        if dataset.field1_name != '' and (child.field1 != '' or child.field1 is not None):
+            data[dataset.field1_en] = child.field1
+        if dataset.field2_name != '' and (child.field2 != '' or child.field2 is not None):
+            data[dataset.field2_en] = child.field2
+        if hasattr(mapelement,'mappoint') and dataset.field3_name != '' and (child.field3 != '' or child.field3 is not None):
+            data[dataset.field3_en] = child.field3
+
+        params = self.context.get('request', None).QUERY_PARAMS
+        if 'data' in params and params['data'] == 'all':
+            for de in dataelements:
+                for ft, field_name in {DataField.INTEGER: 'int_data', DataField.FLOAT: 'float_data', DataField.STRING: 'char_data'}.iteritems():
+                    if de.datafield.field_type == ft:
+                        data[de.datafield.field_en] = getattr(de,field_name)
+
+        return data
+
+    def get_tags(self, mapelement):
         #build nested distinct list
-        return Tag.objects.filter(approved=True, tagindiv__mapelement=mappoint).distinct('tag').values_list('tag',flat=True)
+        return Tag.objects.filter(approved=True, tagindiv__mapelement=mapelement).distinct('tag').values_list('tag',flat=True)
+
+    def get_geom(self,mapelement):
+        if hasattr(mapelement,'mappolygon'):
+            return json.loads(GEOSGeometry(mapelement.mappolygon.mpoly).geojson)
+        return json.loads(GEOSGeometry(mapelement.point).geojson)
 
     class Meta:
         id_field = False
-        geo_field = 'point'
-        model = MapPoint 
-        fields = ('dataset','id','name','street','city','state','zipcode','county','field1','field2','field3','tags')
+        geo_field = 'geom'
+        model = MapElement 
+        fields = ('dataset','id','name','address','data','tags')
 
 class MapPolygonSerializer(gis_serializers.GeoFeatureModelSerializer):
     latitude = serializers.DecimalField(source = 'mappolygon.lat', max_digits=18, decimal_places=15)
