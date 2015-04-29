@@ -174,4 +174,4 @@ REST_FRAMEWORK = {
     'TEST_REQUEST_DEFAULT_FORMAT': 'json'
 }
 
-from gis_csdt.local_settings import *
+from local_settings import *

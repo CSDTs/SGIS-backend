@@ -327,6 +327,7 @@ class AnalyzeAreaSerializer(serializers.ModelSerializer):
 
         all_points = neighboring_points(mappoint, MapPoint.objects.filter(dataset_id=mappoint.dataset_id), dist_objs[-1])
 
+
         data_sums = {'point id(s)':'', 'view url(s)':[]}
         for p in all_points:
             data_sums['point id(s)'] = data_sums['point id(s)'] + ',' + str(p.id)
@@ -594,6 +595,13 @@ class AnalyzeAreaNoValuesSerializer(serializers.ModelSerializer):
         else:
             distances.sort()
 
+        #method is containment or apportionment?
+        method = request.GET.getlist('method')
+        if len(method) > 0 and method[0] == 'apportionment':
+            apportionment = True
+        else:
+            apportionment = False
+
         dist_objs = []
         for dist in distances:
             kwargs = {unit: dist}
@@ -624,7 +632,7 @@ class AnalyzeAreaNoValuesSerializer(serializers.ModelSerializer):
             elif unit == 'mi':
                 dist_str = '%f mi' %(dist.mi)
             temp_qs = MapPolygon.objects.filter(dataset_id__exact=dataset_id).filter(mpoly__coveredby=boundary[dist]).exclude(remote_id__in=already_accounted).distinct()
-            poly = set(temp_qs.values_list('remote_id',flat=True))
+            poly = {x: 1. for x in temp_qs.values_list('remote_id',flat=True)}
             try:
                 land_area = sum([int(x) for x in temp_qs.values_list('field1',flat=True)])
             except:
@@ -633,18 +641,20 @@ class AnalyzeAreaNoValuesSerializer(serializers.ModelSerializer):
             maybe_polys = MapPolygon.objects.filter(dataset_id__exact=dataset_id).exclude(remote_id__in=poly).exclude(remote_id__in=already_accounted).filter(mpoly__intersects=boundary[dist]).distinct()
             #print 'maybes', maybe_polys.values_list('remote_id',flat=True)
             for polygon in maybe_polys:
-                if polygon.mpoly.intersection(boundary[dist]).area > .5 * polygon.mpoly.area:
-                    poly.add(polygon.remote_id)
+                intersection_area = polygon.mpoly.intersection(boundary[dist]).area / polygon.mpoly.area
+                if apportionment or intersection_area > .5:
+                    poly[polygon.remote_id] = intersection_area if apportionment else 1.
                     try:
-                        land_area += int(polygon.field1)
+                        land_area += intersection_area*int(polygon.field1) if apportionment else int(polygon.field1)
                     except:
                         continue
-            already_accounted = already_accounted | poly
+
+            already_accounted = already_accounted | set(poly.keys())
             data_sums[dist_str] = {}
             # data_sums[dist_str]['polygon count'] = len(poly)
             # data_sums[dist_str]['land area (m2)'] = sum([int(i) for i in MapPolygon.objects.filter(dataset_id__exact=dataset_id,remote_id__in=poly).values_list('field1',flat=True)])
             if len(poly) > 0:
-                data_sums[dist_str]['polygons'] = list(poly)
+                data_sums[dist_str]['polygons'] = poly
                 data_sums[dist_str]['land_area'] = land_area
 
         return data_sums
