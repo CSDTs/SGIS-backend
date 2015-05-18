@@ -48,31 +48,31 @@ else:
 
 class NewTagSerializer(serializers.ModelSerializer):
     #mappolygon = MapElementIdField(required=False, source='mapelement_id', field='mappolygon')
-    mappoint = serializers.IntegerField(source='mapelement_id')
+    mapelement = serializers.IntegerField(source='mapelement_id')
     tag = serializers.CharField()
 
 
     class Meta:
         model = TagIndiv
-        fields = ('mappoint','tag')
+        fields = ('mapelement','tag')
 
-    def restore_object(self, attrs, instance=None):
-        #find the mappoint
+    def validate_tag(self, value):
+        if ',' in value or type(value) is list:
+            raise serializers.ValidationError('No more than one tag should be POSTed at once. Commas are not allowed in tags.')
+        return value.strip().lower()
+
+    def create(self, validated_data):
+        me = validated_data.pop('mapelement_id')
         try:
-            mp = MapElement.objects.get(id=attrs['mapelement_id'])
+            me = MapElement.objects.get(id=me)
         except:
-            raise exceptions.ParseError()
-        if ',' in attrs['tag']:
-            return None
-        attrs['tag'] = attrs['tag'].strip().lower()
-        try: ##this part is temporary, allows to post tag by ID #
-            tags = Tag.objects.filter(dataset = mp.dataset, id = int(attrs['tag']))
-        except:
-            tags = Tag.objects.filter(dataset = mp.dataset, tag = attrs['tag'])
+            raise serializers.ValidationError('No MapElement found with ID',str(value))
+        tag_txt = validated_data.pop('tag')
+        tags = Tag.objects.filter(dataset = me.dataset, tag = tag_txt)
 
         len_tags = len(tags)
         if len_tags == 0:
-            tag = Tag(dataset = mp.dataset, tag = attrs['tag'])
+            tag = Tag(dataset = me.dataset, tag = tag_txt)
             tag.save()
         elif len_tags == 1:
             tag = tags[0]
@@ -82,7 +82,7 @@ class NewTagSerializer(serializers.ModelSerializer):
                 tag = approved_tags[0]
             else:
                 tag = tags[0]
-        return TagIndiv(mapelement=mp, tag=tag)
+        return TagIndiv.objects.create(mapelement=me, tag=tag)
 
 class TagCountSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
