@@ -119,11 +119,12 @@ class Dataset(models.Model):
 						i += 1
 						continue
 					elif points[i].remote_id < str(item[self.remote_id_field]):
+						print points[i].remote_id, str(item[self.remote_id_field])
 						try:
 							print 'Deleting point:', points[i],
 							points[i].delete()
-						except:
-							print '...failed to delete point', points[i]
+						except Exception as e:
+							print '...failed to delete point %s:%s' %(points[i],e)
 							#not a huge deal if it fails
 							i += 1
 							continue
@@ -141,6 +142,7 @@ class Dataset(models.Model):
 						try:
 							temp = decimal.Decimal(temp)
 						except:
+							print 'invalid decimal: %s' %(temp)
 							continue
 					elif len(temp) > MapPoint._meta.get_field(field).max_length:
 						temp = temp[0:MapPoint._meta.get_field(field).max_length]
