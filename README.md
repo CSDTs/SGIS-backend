@@ -8,3 +8,4 @@ The frontend can be found [here](https://github.com/gouravjeet/SGIS-2.0).
 * [Fall 2014 Independent Study Syllabus](doc/syllabus.md)
 * [Installation](doc/installation.md)
 * [API Usage](doc/usage.md)
+* [Adding a Dataset](doc/new-dataset.md)
