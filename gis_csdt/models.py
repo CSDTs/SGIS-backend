@@ -7,7 +7,6 @@ from django.db.models import Q#, Count
 import json, urllib, pycurl, decimal
 
 BATCH_SIZE = 5000
-
 class Dataset(models.Model):
 	name = models.CharField(max_length=200)
 	url = models.URLField(blank=True,max_length=300)
@@ -289,7 +288,7 @@ class Observation(models.Model):
 
 class ObservationValue(models.Model):
 	observation = models.ForeignKey(Observation, related_name = 'values')
-	name = models.CharField(max_length='50',blank=True)
+	name = models.CharField(max_length=50,blank=True)
 	value = models.FloatField()
 	
 	class Meta:
