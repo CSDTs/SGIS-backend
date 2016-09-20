@@ -17,7 +17,7 @@ router.register(r'api-dist', views.AnalyzeAreaAroundPointView, base_name = 'area
 router.register(r'api-dist2', views.AnalyzeAreaAroundPointNoValuesView, base_name = 'area2')
 router.register(r'api-sensors', views.SensedDataViewSet)
 
-urlpatterns = patterns('',
+urlpatterns = [
     url(r'^', include(router.urls)),
     url(r'^admin/', include(admin.site.urls)),
     url(r'^api-auth/', include('rest_framework.urls', namespace='rest_framework')),
@@ -25,4 +25,4 @@ urlpatterns = patterns('',
     #url(r'^api-dist/', views.AnalyzeAreaAroundPointView, name='distance'),
     url(r'^around-point/(?P<mappoint_id>[0-9]+)/$', templates.AroundPointView),
     url(r'^around-point/$', templates.AroundPointView),
-)
+]
