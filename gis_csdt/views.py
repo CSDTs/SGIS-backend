@@ -45,7 +45,7 @@ class TestView(PaginatedReadOnlyModelViewSet):
     model = MapElement
 
     def get_queryset(self):
-        return filter_request(self.request.QUERY_PARAMS, 'mapelement')
+        return filter_request(self.request.query_params, 'mapelement')
 
 class PaginatedCSVRenderer (CSVRenderer):
     results_field = 'results'
@@ -78,14 +78,14 @@ class MapPointViewSet(PaginatedReadOnlyModelViewSet):
     model = MapPoint
 
     def get_queryset(self):
-        return filter_request(self.request.QUERY_PARAMS, 'mappoint')
+        return filter_request(self.request.query_params, 'mappoint')
 
 class MapPolygonViewSet(PaginatedReadOnlyModelViewSet):
     serializer_class = MapPolygonSerializer
     model = MapPolygon
 
     def get_queryset(self):
-        return filter_request(self.request.QUERY_PARAMS, 'mappolygon')
+        return filter_request(self.request.query_params, 'mappolygon')
 
 class CountPointsInPolygonView(PaginatedReadOnlyModelViewSet):
     renderer_classes = api_settings.DEFAULT_RENDERER_CLASSES + [PaginatedCSVRenderer]
@@ -98,15 +98,15 @@ class CountPointsInPolygonView(PaginatedReadOnlyModelViewSet):
 
         #split params by which it applies to
         mappolygon_params = {}
-        for (param, result) in self.request.QUERY_PARAMS.items():
+        for (param, result) in self.request.query_params.items():
             if param in ['max_lat','min_lat','max_lon','min_lon']:
                 mappolygon_params[param] = result
             elif param == 'poly_dataset':
                 mappolygon_params['dataset'] = result
         #now get the querysets
         polygons = filter_request(mappolygon_params,'mappolygon')
-        if 'state' in self.request.QUERY_PARAMS:
-            polygons = polygons.filter(remote_id__startswith=self.request.QUERY_PARAMS['state'])
+        if 'state' in self.request.query_params:
+            polygons = polygons.filter(remote_id__startswith=self.request.query_params['state'])
         return polygons
 
         if False:
@@ -186,7 +186,7 @@ class AnalyzeAreaAroundPointView(PaginatedReadOnlyModelViewSet):
     def get_queryset(self, format=None):
         #split params by which it applies to
         mappoint_params = {}
-        for (param, result) in self.request.QUERY_PARAMS.items():
+        for (param, result) in self.request.query_params.items():
             if param in ['max_lat','min_lat','max_lon','min_lon','dataset','tags','tag']:
                 mappoint_params[param] = result
         #if none of this is specified, this is just too much
@@ -225,7 +225,7 @@ class AnalyzeAreaAroundPointNoValuesView(PaginatedReadOnlyModelViewSet):
     def get_queryset(self):
         #split params by which it applies to
         mappoint_params = {}
-        for (param, result) in self.request.QUERY_PARAMS.items():
+        for (param, result) in self.request.query_params.items():
             if param in ['max_lat','min_lat','max_lon','min_lon','dataset','tags','tag','state','zipcode']:
                 mappoint_params[param] = result
         #if none of this is specified, this is just too much
