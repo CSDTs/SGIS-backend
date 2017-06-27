@@ -191,4 +191,7 @@ try:
     CENSUS_API_KEY  = '5yw5yedfhdjryjssrthdjdrhdf' # the key is dummy
 except NameError:
     raise "To use GIS, you need to define a CENSUS API KEY"
-from local_settings import *
+try:
+    from local_settings import *
+except ImportError:
+    pass
