@@ -181,6 +181,11 @@ TEMPLATES = [
     },  
 ]
 
+try:
+    from local_settings import *
+except ImportError:
+    GOOGLE_API_KEY = None
+    CENSUS_API_KEY = None
 
 # Make sure a GOOGLE_API_KEY is defined
 try:
@@ -191,8 +196,3 @@ try:
     CENSUS_API_KEY  # the key is dummy
 except NameError:
     raise "To use GIS, you need to define a CENSUS API KEY"
-try:
-    from local_settings import *
-except ImportError:
-    GOOGLE_API_KEY = None
-    CENSUS_API_KEY = None
