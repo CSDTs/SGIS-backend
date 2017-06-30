@@ -186,13 +186,3 @@ try:
 except ImportError:
     GOOGLE_API_KEY = None
     CENSUS_API_KEY = None
-
-# Make sure a GOOGLE_API_KEY is defined
-try:
-    GOOGLE_API_KEY  # the key is dummy
-except NameError:
-    raise "To use GIS, you need to define a GOOGLE_API_KEY"
-try:
-    CENSUS_API_KEY  # the key is dummy
-except NameError:
-    raise "To use GIS, you need to define a CENSUS API KEY"
