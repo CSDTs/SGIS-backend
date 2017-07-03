@@ -181,5 +181,8 @@ TEMPLATES = [
     },  
 ]
 
-
-from local_settings import *
+try:
+    from local_settings import *
+except ImportError:
+    GOOGLE_API_KEY = None
+    CENSUS_API_KEY = None
