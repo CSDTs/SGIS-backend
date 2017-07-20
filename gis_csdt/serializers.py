@@ -517,7 +517,7 @@ class SensedDataSerializer(serializers.ModelSerializer):
     time = serializers.DateTimeField()
     accuracy = serializers.FloatField(required=False)
     value_name = serializers.CharField(source='name')
-    value = serializers.FloatField(source='value')
+    value = serializers.FloatField()
 
     class Meta:
         model = ObservationValue
