@@ -4,6 +4,7 @@
 echo "Getting essentials"
 echo
 echo
+sudo apt-get -y update
 sudo apt-get -y install python-dev build-essential
 
 # Pip and Virtualenv
@@ -21,8 +22,16 @@ pip install https://github.com/djangonauts/django-rest-framework-gis/tarball/mas
 echo "Getting PostgreSQL and PostGIS"
 echo
 echo
-# sudo apt-get install postgresql-9.3 postgresql-9.3-postgis-2.1 pgadmin3 postgresql-contrib
-# WEIRD ERROR OCCURING BUT POSTGRE IS ALREADY INSTALLED
+sudo apt-get -y install postgresql-9.5 postgresql-9.5-postgis-2.2 pgadmin3 postgresql-contrib
+sudo apt-get -y install libxml2-dev
+sudo apt-get -y install libgdal1-dev
+sudo apt-get -y install postgis*
+wget http://download.osgeo.org/postgis/source/postgis-2.4.3.tar.gz
+tar xvzf postgis-2.4.3.tar.gz
+cd postgis-2.4.3
+./configure
+make
+make install
 sudo su - postgres -c createdb django_test exit
 
 # Install GEOS
@@ -32,9 +41,9 @@ echo
 sudo apt-get -y install build-essential
 sudo apt-get -y install gcc build-essential
 sudo apt-get -y install g++ build-essential
-wget http://download.osgeo.org/geos/geos-3.4.2.tar.bz2
-tar xjf geos-3.4.2.tar.bz2
-cd geos-3.4.2
+wget http://download.osgeo.org/geos/geos-3.6.2.tar.bz2
+tar xjf geos-3.6.2.tar.bz2
+cd geos-3.6.2
 ./configure
 make
 sudo make install
@@ -44,10 +53,10 @@ cd ..
 echo "Installing PROJ.4"
 echo
 echo
-wget http://download.osgeo.org/proj/proj-4.8.0.tar.gz
+wget http://download.osgeo.org/proj/proj-4.9.3.tar.gz
 wget http://download.osgeo.org/proj/proj-datumgrid-1.5.tar.gz
-tar xzf proj-4.8.0.tar.gz
-cd proj-4.8.0/nad
+tar xzf proj-4.9.3.tar.gz
+cd proj-4.9.3/nad
 tar xzf ../../proj-datumgrid-1.5.tar.gz
 cd ..
 ./configure
@@ -59,8 +68,8 @@ cd ..
 echo "Setting up PostGIS"
 echo
 echo
-cd ~/SGIS-backend/bin
+cd ~/
+echo "CREATE USER django_user WITH PASSWORD 'dj4ng0_t3st';CREATE EXTENSION adminpack;CREATE EXTENSION postgis;CREATE EXTENSION postgis_topology;\q" >> psqlCommands.sql
 sudo su - postgres -c psql django_test < psqlCommands.sql
-
 echo "All done"
 
