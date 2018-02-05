@@ -15,7 +15,6 @@ sudo apt-get -y install python-pip
 sudo pip install virtualenv
 sudo apt-get -y install libcurl4-openssl-dev
 sudo apt-get -y install libpq-dev
-. activate
 pip install https://github.com/djangonauts/django-rest-framework-gis/tarball/master
 
 # Install Postgre and PostGIS
@@ -68,8 +67,6 @@ cd ..
 echo "Setting up PostGIS"
 echo
 echo
-cd ~/
-echo "CREATE USER django_user WITH PASSWORD 'dj4ng0_t3st';CREATE EXTENSION adminpack;CREATE EXTENSION postgis;CREATE EXTENSION postgis_topology;\q" >> psqlCommands.sql
-sudo su - postgres -c psql django_test < psqlCommands.sql
+sudo -u postgres psql django_test-c "CREATE USER django_user WITH PASSWORD 'dj4ng0_t3st';CREATE EXTENSION adminpack; CREATE EXTENSION postgis; CREATE EXTENSION postgis_topology;"
 echo "All done"
 
