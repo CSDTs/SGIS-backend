@@ -12,6 +12,7 @@ echo "Getting pip, virtualenv, and pip libraries"
 echo
 echo
 sudo apt-get -y install python-pip
+sudo pip install --upgrade pip
 sudo pip install virtualenv
 sudo apt-get -y install libcurl4-openssl-dev
 sudo apt-get -y install libpq-dev
@@ -25,14 +26,8 @@ echo
 sudo apt-get -y install postgresql-9.5 postgresql-9.5-postgis-2.2 pgadmin3 postgresql-contrib
 sudo apt-get -y install libxml2-dev
 sudo apt-get -y install libgdal1-dev
-sudo apt-get -y install postgis*
-wget http://download.osgeo.org/postgis/source/postgis-2.4.3.tar.gz
-tar xvzf postgis-2.4.3.tar.gz
-cd postgis-2.4.3
-./configure
-make
-make install
-sudo su - postgres -c createdb django_test exit
+sudo apt-get -y install postgresql-server-dev-9.5
+sudo su - postgres -c "createdb django_test;exit"
 
 # Install GEOS
 echo "Installing GEOS"
@@ -68,6 +63,6 @@ cd ..
 echo "Setting up PostGIS"
 echo
 echo
-sudo -u postgres psql django_test-c "CREATE USER django_user WITH PASSWORD 'dj4ng0_t3st';CREATE EXTENSION adminpack; CREATE EXTENSION postgis; CREATE EXTENSION postgis_topology;"
+sudo -u postgres psql django_test -c "CREATE USER django_user WITH PASSWORD 'dj4ng0_t3st';CREATE EXTENSION adminpack; CREATE EXTENSION postgis; CREATE EXTENSION postgis_topology;"
 echo "All done"
 
