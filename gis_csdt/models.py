@@ -3,6 +3,7 @@ from datetime import datetime
 from django.utils.timezone import utc
 from django.conf import settings
 from django.db.models import Q#, Count
+from django.contrib.auth.models import User
 
 import json, urllib, pycurl, decimal
 
@@ -278,7 +279,13 @@ class DataField(models.Model):
 
 class Sensor(models.Model):
 	name = models.CharField(max_length=100)
-	sensor_type = models.CharField(max_length=100)
+	supplier = models.CharField(max_length=100)
+        model = models.CharField(max_length=100)
+	metric = models.CharField(max_length=100)
+	accuracy = models.CharField(max_length=100)
+
+        ## Put in unicode that prints name
+	
 
 class Observation(models.Model):
 	mapelement = models.ForeignKey(MapElement, related_name='observations')
@@ -344,3 +351,14 @@ class TagIndiv(models.Model):
         elif self.approved and matches.filter(approved=True).count() == 0:
         	matches[0].approved = True
         	matches[0].save()'''
+
+class DataPoint(models.Model):
+	value = models.FloatField()
+        point = models.ForeignKey(MapPoint)
+        sensor = models.ForeignKey(Sensor)
+	user = models.ForeignKey(User)
+	#team = models.ForeignKey(Team)
+
+	def __unicode__(self):
+		return self.value + "point: " + self.point + "sensor: " + self.sensor + "user: " + self.user
+
