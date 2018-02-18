@@ -278,13 +278,14 @@ class DataField(models.Model):
 		return self.field_en + ', id:' + str(self.id) + ', dataset:' + str(self.dataset_id)
 
 class Sensor(models.Model):
-	name = models.CharField(max_length=100)
-	supplier = models.CharField(max_length=100)
-        model = models.CharField(max_length=100)
-	metric = models.CharField(max_length=100)
-	accuracy = models.CharField(max_length=100)
+	name = models.CharField(max_length=100, default='name')
+	supplier = models.CharField(max_length=100, default='supplier')
+        model = models.CharField(max_length=100, default='model')
+	metric = models.CharField(max_length=100, default='metric')
+	accuracy = models.CharField(max_length=100, default='accuracy')
 
-        ## Put in unicode that prints name
+	def __unicode__(self):
+		return 'id: ' + str(self.name) 
 	
 
 class Observation(models.Model):
