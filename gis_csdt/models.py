@@ -286,7 +286,6 @@ class Sensor(models.Model):
 
 	def __unicode__(self):
 		return 'id: ' + str(self.name) 
-	
 
 class Observation(models.Model):
 	mapelement = models.ForeignKey(MapElement, related_name='observations')
@@ -358,6 +357,7 @@ class DataPoint(models.Model):
         point = models.ForeignKey(MapPoint)
         sensor = models.ForeignKey(Sensor)
 	user = models.ForeignKey(User)
+        # To add later
 	#team = models.ForeignKey(Team)
 
 	def __unicode__(self):
