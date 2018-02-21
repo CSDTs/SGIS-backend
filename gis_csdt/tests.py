@@ -25,8 +25,3 @@ class AllViewTestsNoData(APITestCase):
     def test_no_mappolygons_analysis_around_point(self):
         response = self.client.get('/api-dist/')
         self.assertEqual(response.status_code, 400)
-        
-
-
-
-        #self.assertEqual(response.data, {'id': 4, 'username': 'lauren'})
