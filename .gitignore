@@ -9,3 +9,6 @@ eclipse/
 python/
 gis_csdt/data/*
 gis_csdt/local_settings.py
+.vagrant/*
+ubuntu-xenial-16.04-cloudimg-console.log
+.coverage
