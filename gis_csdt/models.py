@@ -3,7 +3,7 @@ from datetime import datetime
 from django.utils.timezone import utc
 from django.conf import settings
 from django.db.models import Q#, Count
-from django.contrib.auth.models import User
+from django.contrib.auth.models import get_user_model
 
 import json, urllib, pycurl, decimal
 
@@ -278,14 +278,14 @@ class DataField(models.Model):
 		return self.field_en + ', id:' + str(self.id) + ', dataset:' + str(self.dataset_id)
 
 class Sensor(models.Model):
-	name = models.CharField(max_length=100, default='name')
-	supplier = models.CharField(max_length=100, default='supplier')
+        name = models.CharField(max_length=100, default='name')
+        supplier = models.CharField(max_length=100, default='supplier')
         model = models.CharField(max_length=100, default='model')
-	metric = models.CharField(max_length=100, default='metric')
-	accuracy = models.CharField(max_length=100, default='accuracy')
+        metric = models.CharField(max_length=100, default='metric')
+        accuracy = models.CharField(max_length=100, default='accuracy')
 
-	def __unicode__(self):
-		return 'id: ' + str(self.name) 
+        def __unicode__(self):
+                return 'id: ' + str(self.name) 
 
 class Observation(models.Model):
 	mapelement = models.ForeignKey(MapElement, related_name='observations')
@@ -353,13 +353,14 @@ class TagIndiv(models.Model):
         	matches[0].save()'''
 
 class DataPoint(models.Model):
-	value = models.FloatField()
+        User = get_user_model()
+        value = models.DecimalField(max_digits=30, decimal_places=15)
         point = models.ForeignKey(MapPoint)
         sensor = models.ForeignKey(Sensor)
-	user = models.ForeignKey(User)
+        user = models.ForeignKey(User)
         # To add later
-	#team = models.ForeignKey(Team)
+        #team = models.ForeignKey(Team)
 
-	def __unicode__(self):
-		return self.value + "point: " + self.point + "sensor: " + self.sensor + "user: " + self.user
+        def __unicode__(self):
+                return self.value + "point: " + self.point + "sensor: " + self.sensor + "user: " + self.user
 
