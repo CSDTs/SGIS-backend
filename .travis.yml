@@ -15,20 +15,19 @@ env:
   - DJANGO=1.9.5
 
 before_install:
-  - export DJANGO_SETTINGS_MODULE="SGIS-Backend.settings"
+  - export DJANGO_SETTINGS_MODULE="gis_csdt.settings"
   - export PYTHONPATH="/usr/local/lib/python2.7/dist-packages"
   - export PIP_USE_MIRRORS=true
 
 install:
   - pip install setuptools --upgrade
-  - "bash bin/setup.sh"
+  - "bash bin/travis.sh"
   - pip install --upgrade -r requirements.txt
   - pip install coveralls
   - pip install flake8
   - sudo service postgresql restart
 
 script:
-  - flake8 --ignore=E722 . 
   - python manage.py migrate
   - coverage run --source="." manage.py test
 
