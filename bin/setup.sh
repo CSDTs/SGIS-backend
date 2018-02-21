@@ -64,5 +64,6 @@ echo "Setting up PostGIS"
 echo
 echo
 sudo -u postgres psql django_test -c "CREATE USER django_user WITH PASSWORD 'dj4ng0_t3st';CREATE EXTENSION adminpack; CREATE EXTENSION postgis; CREATE EXTENSION postgis_topology;"
+sudo -u postgres psql -U postgres -d postgres -c "ALTER USER django_user WITH SUPERUSER;"
 echo "All done"
 
