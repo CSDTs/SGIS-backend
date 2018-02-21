@@ -3,7 +3,7 @@ from datetime import datetime
 from django.utils.timezone import utc
 from django.conf import settings
 from django.db.models import Q#, Count
-from django.contrib.auth.models import get_user_model
+from django.contrib.auth import get_user_model
 
 import json, urllib, pycurl, decimal
 
