@@ -27,7 +27,7 @@ Everything else:
 
 If you hit an error like this:
 
-```Could not find a version that satisfies the requirement djangorestframework-gis>=0.8.1 (from -r libraries.txt (line 6)) (from versions: 0.8, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8)```
+```Could not find a version that satisfies the requirement djangorestframework-gis>=0.8.1 (from -r requirements.txt (line 6)) (from versions: 0.8, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8)```
 
 Enter the following command to download an alpha of this version:
 

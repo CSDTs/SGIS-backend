@@ -17,7 +17,7 @@ sudo pip install virtualenv
 sudo apt-get -y install libcurl4-openssl-dev
 sudo apt-get -y install libpq-dev
 pip install https://github.com/djangonauts/django-rest-framework-gis/tarball/master
-sudo pip install --upgrade -r /vagrant/libraries.txt
+sudo pip install --upgrade -r /vagrant/requirements.txt
 
 # Install Postgre and PostGIS
 echo "Getting PostgreSQL and PostGIS"
