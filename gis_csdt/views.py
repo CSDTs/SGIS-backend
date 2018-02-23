@@ -9,7 +9,7 @@ from django.core.paginator import Paginator
 from django.http import HttpResponse, HttpRequest,  HttpResponseNotAllowed, HttpResponseRedirect
 from django.shortcuts import render
 from gis_csdt.filter_tools import filter_request, neighboring_points
-from gis_csdt.models import Dataset, MapElement, MapPoint, Tag, MapPolygon, TagIndiv, DataField, DataElement, Observation, ObservationValue, Sensor
+from gis_csdt.models import Dataset, MapElement, MapPoint, Tag, MapPolygon, TagIndiv, DataField, DataElement, Observation, ObservationValue, Sensor, DataPoint
 from gis_csdt.serializers import TagCountSerializer, DatasetSerializer, MapPointSerializer, NewTagSerializer, MapPolygonSerializer, CountPointsSerializer, AnalyzeAreaSerializer, AnalyzeAreaNoValuesSerializer, SensedDataSerializer
 #import csv
 from gis_csdt.serializers import TestSerializer
@@ -261,9 +261,11 @@ class AnalyzeAreaAroundPointNoValuesView(PaginatedReadOnlyModelViewSet):
 class SubmitDataPointView(PaginatedReadOnlyModelViewSet):
     renderer_classes = api_settings.DEFAULT_RENDERER_CLASSES + [PaginatedCSVRenderer]
     serializer_class = AnalyzeAreaSerializer
+    queryset = Dataset.objects.all()
     model = DataPoint
     permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
-    form_class = MyForm
+    # Form to be created
+    # form_class = MyForm
     initial = {'key': 'value'}
     
     def post(self, request, *args, **kwargs):
@@ -275,10 +277,10 @@ class SubmitDataPointView(PaginatedReadOnlyModelViewSet):
                point=form.cleaned_data['point'],
                sensor=form.cleaned_data['sensor'],
                user=form.cleaned_data['user'],
-               # To add later
-               #team=form.cleaned_data['value'],
+               team=form.cleaned_data['team'],
            )
            # Some success url
            return HttpResponseRedirect('/success/')
        else:
            return None
+

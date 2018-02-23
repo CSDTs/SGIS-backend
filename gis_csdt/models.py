@@ -353,12 +353,11 @@ class TagIndiv(models.Model):
         	matches[0].save()'''
 
 class DataPoint(models.Model):
-        User = get_user_model()
         value = models.DecimalField(max_digits=30, decimal_places=15)
         point = models.ForeignKey(MapPoint)
         sensor = models.ForeignKey(Sensor)
-        user = models.ForeignKey(User)
-        # To add later
+        user = models.ForeignKey(get_user_model(), default=None)
+        # To add later to tie into django_team
         #team = models.ForeignKey(Team)
 
         def __unicode__(self):
