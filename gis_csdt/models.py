@@ -355,6 +355,8 @@ class TagIndiv(models.Model):
 class DataPoint(models.Model):
         value = models.DecimalField(max_digits=30, decimal_places=15)
         point = models.ForeignKey(MapPoint)
+        lat = models.DecimalField(max_digits=18, decimal_places=15, default=None)
+        lon = models.DecimalField(max_digits=18, decimal_places=15, default=None)
         sensor = models.ForeignKey(Sensor)
         user = models.ForeignKey(get_user_model(), default=None)
         # To add later to tie into django_team

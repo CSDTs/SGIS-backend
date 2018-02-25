@@ -1,4 +1,4 @@
-from gis_csdt.models import Dataset, MapElement, MapPoint, Tag, TagIndiv, MapPolygon, DataField, DataElement, Observation, ObservationValue, Sensor
+from gis_csdt.models import Dataset, MapElement, MapPoint, Tag, TagIndiv, MapPolygon, DataField, DataElement, Observation, ObservationValue, Sensor, DataPoint
 from gis_csdt.filter_tools import filter_request, neighboring_points, unite_radius_bubbles
 from gis_csdt.geometry_tools import circle_as_polygon
 from gis_csdt.settings import CENSUS_API_KEY
@@ -510,6 +510,7 @@ class ObservationSerializer(serializers.ModelSerializer):
             return Observation.objects.get(mapelement_id=attrs['mapelement_id'],time=attrs['time'],accuracy=attrs['accuracy'])
         except:
             return Observation(mapelement_id=attrs['mapelement_id'],time=attrs['time'],accuracy=attrs['accuracy'])
+
 class SensedDataSerializer(serializers.ModelSerializer):
     sensor_name = serializers.CharField(source='observation__sensor__name')
     sensor_type = serializers.CharField()
@@ -549,7 +550,34 @@ class SensedDataSerializer(serializers.ModelSerializer):
         #create the value
         return ObservationValue(observation=observation,name=attrs['name'].strip(),value=attrs['value'])
 
+class DataPointSerializer(serializers.ModelSerializer):
+    value = serializers.DecimalField(max_digits=30, decimal_places=15)
+    lat = serializers.DecimalField(max_digits=18, decimal_places=15)
+    lon = serializers.DecimalField(max_digits=18, decimal_places=15)
+    sensor_name = serializers.CharField()
+    sensor_type = serializers.CharField()
 
+    class Meta:
+        model = DataPoint
+        fields = ('value', 'lat', 'lon', 'sensor_name', 'sensor_type')
+
+    def restore_object(self, attrs, instance=None):
+        #find or create the sensor
+        sensor = Sensor.objects.filter(name__iexact=attrs['sensor_name'].strip(),sensor_type__iexact=attrs['sensor_type'].strip())
+        if len(sensor)==0:
+            sensor = Sensor(name=attrs['sensor_name'].strip(),sensor_type=attrs['sensor_type'].strip())
+            sensor.save()
+        else:
+            sensor = sensor[0]
+        #find or create the datapoint
+        datapoint = DataPoint.objects.filter(value=attrs['value'].strip(), sensor=sensor)
+        if len(datapoint)==0:
+            datapoint = DataPoint(value=attrs['value'].strip(), sensor=sensor)
+            observation.save()
+        else:
+            observation = observation[0]
+        #create the value
+        return DataPoint(value=attrs['value'].strip(), sensor=sensor, lat=attrs['lat'], lon=attrs['lon'])
 
 class AnalyzeAreaNoValuesSerializer(serializers.ModelSerializer):
     point_id = serializers.CharField(source = 'mappoint.id')

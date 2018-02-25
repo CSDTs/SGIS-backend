@@ -10,7 +10,7 @@ from django.http import HttpResponse, HttpRequest,  HttpResponseNotAllowed, Http
 from django.shortcuts import render
 from gis_csdt.filter_tools import filter_request, neighboring_points
 from gis_csdt.models import Dataset, MapElement, MapPoint, Tag, MapPolygon, TagIndiv, DataField, DataElement, Observation, ObservationValue, Sensor, DataPoint
-from gis_csdt.serializers import TagCountSerializer, DatasetSerializer, MapPointSerializer, NewTagSerializer, MapPolygonSerializer, CountPointsSerializer, AnalyzeAreaSerializer, AnalyzeAreaNoValuesSerializer, SensedDataSerializer
+from gis_csdt.serializers import TagCountSerializer, DatasetSerializer, MapPointSerializer, NewTagSerializer, MapPolygonSerializer, CountPointsSerializer, AnalyzeAreaSerializer, AnalyzeAreaNoValuesSerializer, SensedDataSerializer, DataPointSerializer
 #import csv
 from gis_csdt.serializers import TestSerializer
 
@@ -36,6 +36,16 @@ class SensedDataViewSet(PaginatedModelViewSet):
     max_paginate_by = MAX_PAGINATE_BY_CONST
     queryset = ObservationValue.objects.filter()
     serializer_class = SensedDataSerializer
+
+    #http://www.django-rest-framework.org/api-guide/permissions
+    permission_classes = (permissions.AllowAny,)#(permissions.IsAuthenticatedOrReadOnly)
+
+class SubmitDataPointView(PaginatedReadOnlyModelViewSet):
+    paginate_by = PAGINATE_BY_CONST
+    paginate_by_param = PAGINATE_BY_PARAM_CONST
+    max_paginate_by = MAX_PAGINATE_BY_CONST
+    queryset = ObservationValue.objects.filter()
+    serializer_class = DataPointSerializer
 
     #http://www.django-rest-framework.org/api-guide/permissions
     permission_classes = (permissions.AllowAny,)#(permissions.IsAuthenticatedOrReadOnly)
@@ -256,31 +266,3 @@ class AnalyzeAreaAroundPointNoValuesView(PaginatedReadOnlyModelViewSet):
                 continue
             take_out.extend(neighboring_points(point, points, Distance(**kwargs)).exclude(id=point.id).values_list('id',flat=True))
         return points.exclude(id__in=take_out).distinct()
-
-
-class SubmitDataPointView(PaginatedReadOnlyModelViewSet):
-    renderer_classes = api_settings.DEFAULT_RENDERER_CLASSES + [PaginatedCSVRenderer]
-    serializer_class = AnalyzeAreaSerializer
-    queryset = Dataset.objects.all()
-    model = DataPoint
-    permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
-    # Form to be created
-    # form_class = MyForm
-    initial = {'key': 'value'}
-    
-    def post(self, request, *args, **kwargs):
-       form = self.form_class(initial=self.initial)
-       if form.is_valid():
-           # Process form
-           dataPoint = DataPoint.objects.create_datapoint(
-               value=form.cleaned_data['value'],
-               point=form.cleaned_data['point'],
-               sensor=form.cleaned_data['sensor'],
-               user=form.cleaned_data['user'],
-               team=form.cleaned_data['team'],
-           )
-           # Some success url
-           return HttpResponseRedirect('/success/')
-       else:
-           return None
-
