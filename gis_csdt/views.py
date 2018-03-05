@@ -40,11 +40,11 @@ class SensedDataViewSet(PaginatedModelViewSet):
     #http://www.django-rest-framework.org/api-guide/permissions
     permission_classes = (permissions.AllowAny,)#(permissions.IsAuthenticatedOrReadOnly)
 
-class SubmitDataPointView(PaginatedReadOnlyModelViewSet):
+class SubmitDataPointView(PaginatedModelViewSet):
     paginate_by = PAGINATE_BY_CONST
     paginate_by_param = PAGINATE_BY_PARAM_CONST
     max_paginate_by = MAX_PAGINATE_BY_CONST
-    queryset = ObservationValue.objects.filter()
+    queryset = DataPoint.objects.all()
     serializer_class = DataPointSerializer
 
     #http://www.django-rest-framework.org/api-guide/permissions

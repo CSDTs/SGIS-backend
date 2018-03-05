@@ -501,6 +501,7 @@ class SensorSerializer(serializers.ModelSerializer):
             return Sensor.objects.get(name__iexact=attrs['name'].strip(),sensor_type__iexact=attrs['sensor_type'].strip())
         except:
             return Sensor(name=attrs['name'].strip(),sensor_type=attrs['sensor_type'].strip())
+
 class ObservationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Observation
@@ -524,7 +525,7 @@ class SensedDataSerializer(serializers.ModelSerializer):
         model = ObservationValue
         fields = ('sensor_name','sensor_type','mapelement','time','accuracy','value_name','value')
 
-    def restore_object(self, attrs, instance=None):
+    def create(self, attrs, instance=None):
         #check that we have enough info
         #if not set('sensor_name','sensor_type','mapelement','time','value_name','value').issubset(set(attrs.keys())):
         #    raise exceptions.ParseError()
@@ -552,32 +553,11 @@ class SensedDataSerializer(serializers.ModelSerializer):
 
 class DataPointSerializer(serializers.ModelSerializer):
     value = serializers.DecimalField(max_digits=30, decimal_places=15)
-    lat = serializers.DecimalField(max_digits=18, decimal_places=15)
-    lon = serializers.DecimalField(max_digits=18, decimal_places=15)
-    sensor_name = serializers.CharField()
-    sensor_type = serializers.CharField()
+    sensor = serializers.ChoiceField(choices=list(Sensor.objects.all()))
 
     class Meta:
         model = DataPoint
-        fields = ('value', 'lat', 'lon', 'sensor_name', 'sensor_type')
-
-    def restore_object(self, attrs, instance=None):
-        #find or create the sensor
-        sensor = Sensor.objects.filter(name__iexact=attrs['sensor_name'].strip(),sensor_type__iexact=attrs['sensor_type'].strip())
-        if len(sensor)==0:
-            sensor = Sensor(name=attrs['sensor_name'].strip(),sensor_type=attrs['sensor_type'].strip())
-            sensor.save()
-        else:
-            sensor = sensor[0]
-        #find or create the datapoint
-        datapoint = DataPoint.objects.filter(value=attrs['value'].strip(), sensor=sensor)
-        if len(datapoint)==0:
-            datapoint = DataPoint(value=attrs['value'].strip(), sensor=sensor)
-            observation.save()
-        else:
-            observation = observation[0]
-        #create the value
-        return DataPoint(value=attrs['value'].strip(), sensor=sensor, lat=attrs['lat'], lon=attrs['lon'])
+        fields = ('__all__')
 
 class AnalyzeAreaNoValuesSerializer(serializers.ModelSerializer):
     point_id = serializers.CharField(source = 'mappoint.id')
@@ -685,4 +665,4 @@ class AnalyzeAreaNoValuesSerializer(serializers.ModelSerializer):
                 data_sums[dist_str]['polygons'] = poly
                 data_sums[dist_str]['land_area'] = land_area
 
-        return data_sums
+
