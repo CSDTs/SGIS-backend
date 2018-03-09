@@ -280,7 +280,7 @@ class DataField(models.Model):
 class Sensor(models.Model):
         name = models.CharField(max_length=100, default='name')
         supplier = models.CharField(max_length=100, default='supplier')
-        model = models.CharField(max_length=100, default='model')
+        model_number = models.CharField(max_length=100, default='model_number')
         metric = models.CharField(max_length=100, default='metric')
         accuracy = models.CharField(max_length=100, default='accuracy')
 

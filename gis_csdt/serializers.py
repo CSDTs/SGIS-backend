@@ -493,14 +493,19 @@ class AnalyzeAreaSerializer(serializers.ModelSerializer):
         return data_sum
 
 class SensorSerializer(serializers.ModelSerializer):
+    name = serializers.CharField(max_length=100)
+    supplier = serializers.CharField(max_length=100)
+    model_number = serializers.CharField(max_length=100)
+    metric = serializers.CharField(max_length=100)
+    accuracy = serializers.CharField(max_length=100)
     class Meta:
         model = Sensor
-        fields = ('name','sensor_type')
-    def restore_object(self, attrs, instance=None):
+        fields = ('name', 'supplier', 'model_number', 'metric', 'accuracy')
+    def create(self, attrs, instance=None):
         try:
-            return Sensor.objects.get(name__iexact=attrs['name'].strip(),sensor_type__iexact=attrs['sensor_type'].strip())
+            return Sensor.objects.get(name__iexact=attrs['name'].strip(),supplier__iexact=attrs['supplier'].strip(),model_number__isexact=attrs['model_number'])
         except:
-            return Sensor(name=attrs['name'].strip(),sensor_type=attrs['sensor_type'].strip())
+            return Sensor(name=attrs['name'].strip(),supplier=attrs['supplier'].strip(),model_number=attrs['model_number'],metric=attrs['metric'],accuracy=attrs['accuracy'])
 
 class ObservationSerializer(serializers.ModelSerializer):
     class Meta:
