@@ -354,12 +354,12 @@ class TagIndiv(models.Model):
 
 class DataPoint(models.Model):
         value = models.DecimalField(max_digits=30, decimal_places=15)
-        point = models.ForeignKey(MapPoint)
-        sensor = models.ForeignKey(Sensor)
+        point = models.ForeignKey(MapPoint, related_name='points')
+        sensor = models.ForeignKey(Sensor, related_name='sensors')
         user = models.ForeignKey(get_user_model(), default=None)
         # To add later to tie into django_team
         #team = models.ForeignKey(Team)
 
         def __unicode__(self):
-                return self.value + "point: " + self.point + "sensor: " + self.sensor + "user: " + self.user
+                return "value: " + str(self.value) + " point: " + str(self.point) + " sensor: " + str(self.sensor)
 

@@ -7,8 +7,10 @@ from rest_framework_gis import serializers as gis_serializers
 from django.contrib.gis.measure import Distance, Area
 from django.contrib.gis.geos import GEOSGeometry
 from django.core.exceptions import ObjectDoesNotExist
+from django.core import serializers as model_serializers
+from django.forms.models import model_to_dict
 from django.db.models import Sum, Count
-from django.http import HttpResponse, HttpRequest, HttpResponseBadRequest, HttpResponseNotAllowed
+from django.http import HttpResponse, HttpRequest, HttpResponseBadRequest, HttpResponseNotAllowed, JsonResponse
 from django import VERSION as DJANGO_VERSION
 import copy, json, urllib
 
@@ -502,10 +504,7 @@ class SensorSerializer(serializers.ModelSerializer):
         model = Sensor
         fields = ('name', 'supplier', 'model_number', 'metric', 'accuracy')
     def create(self, attrs, instance=None):
-        try:
-            return Sensor.objects.get(name__iexact=attrs['name'].strip(),supplier__iexact=attrs['supplier'].strip(),model_number__isexact=attrs['model_number'])
-        except:
-            return Sensor(name=attrs['name'].strip(),supplier=attrs['supplier'].strip(),model_number=attrs['model_number'],metric=attrs['metric'],accuracy=attrs['accuracy'])
+        return Sensor(name=attrs['name'].strip(),supplier=attrs['supplier'].strip(),model_number=attrs['model_number'],metric=attrs['metric'],accuracy=attrs['accuracy'])
 
 class ObservationSerializer(serializers.ModelSerializer):
     class Meta:
@@ -558,11 +557,15 @@ class SensedDataSerializer(serializers.ModelSerializer):
 
 class DataPointSerializer(serializers.ModelSerializer):
     value = serializers.DecimalField(max_digits=30, decimal_places=15)
-    sensor = serializers.ChoiceField(choices=list(Sensor.objects.all()))
+    sensors = SensorSerializer(many=True, read_only=True)
+    points = MapPointSerializer(many=True, read_only=True)
 
     class Meta:
         model = DataPoint
         fields = ('__all__')
+
+    def create(self, attrs, instance=None):
+        return DataPoint(value=attrs['value'], sensor=attrs['sensor'], point=attrs['point'])
 
 class AnalyzeAreaNoValuesSerializer(serializers.ModelSerializer):
     point_id = serializers.CharField(source = 'mappoint.id')
