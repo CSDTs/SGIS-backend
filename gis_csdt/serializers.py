@@ -504,7 +504,9 @@ class SensorSerializer(serializers.ModelSerializer):
         model = Sensor
         fields = ('name', 'supplier', 'model_number', 'metric', 'accuracy')
     def create(self, attrs, instance=None):
-        return Sensor(name=attrs['name'].strip(),supplier=attrs['supplier'].strip(),model_number=attrs['model_number'],metric=attrs['metric'],accuracy=attrs['accuracy'])
+        sensorModel = Sensor(name=attrs['name'].strip(),supplier=attrs['supplier'].strip(),model_number=attrs['model_number'],metric=attrs['metric'],accuracy=attrs['accuracy'])
+        sensorModel.save()
+        return sensorMode
 
 class ObservationSerializer(serializers.ModelSerializer):
     class Meta:
@@ -565,7 +567,10 @@ class DataPointSerializer(serializers.ModelSerializer):
         fields = ('__all__')
 
     def create(self, attrs, instance=None):
-        return DataPoint(value=attrs['value'], sensor=attrs['sensor'], point=attrs['point'])
+        thisUser = self.context['request'].user
+        datapointModel = DataPoint(value=attrs['value'], sensor=attrs['sensor'], point=attrs['point'], user_id=thisUser.id)
+        datapointModel.save()
+        return datapointModel
 
 class AnalyzeAreaNoValuesSerializer(serializers.ModelSerializer):
     point_id = serializers.CharField(source = 'mappoint.id')
