@@ -278,7 +278,7 @@ class DataField(models.Model):
 		return self.field_en + ', id:' + str(self.id) + ', dataset:' + str(self.dataset_id)
 
 class Sensor(models.Model):
-        name = models.CharField(max_length=100, default='name')
+        name = models.CharField(max_length=100, default='name', unique=True)
         supplier = models.CharField(max_length=100, default='supplier')
         model_number = models.CharField(max_length=100, default='model_number')
         metric = models.CharField(max_length=100, default='metric')

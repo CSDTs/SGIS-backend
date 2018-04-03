@@ -506,7 +506,7 @@ class SensorSerializer(serializers.ModelSerializer):
     def create(self, attrs, instance=None):
         sensorModel = Sensor(name=attrs['name'].strip(),supplier=attrs['supplier'].strip(),model_number=attrs['model_number'],metric=attrs['metric'],accuracy=attrs['accuracy'])
         sensorModel.save()
-        return sensorMode
+        return sensorModel
 
 class ObservationSerializer(serializers.ModelSerializer):
     class Meta:
