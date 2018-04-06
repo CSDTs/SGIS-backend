@@ -80,7 +80,7 @@ class NewTagViewSet(PaginatedModelViewSet):
     serializer_class = NewTagSerializer
 
     #http://www.django-rest-framework.org/api-guide/permissions
-    permission_classes = [permissions.IsAuthenticated]#(permissions.IsAuthenticatedOrReadOnly)
+    permission_classes = [permissions.AllowAny]#(permissions.IsAuthenticatedOrReadOnly)
 
 class TagCountViewSet(PaginatedReadOnlyModelViewSet):
     serializer_class = TagCountSerializer
@@ -111,7 +111,7 @@ class CountPointsInPolygonView(PaginatedReadOnlyModelViewSet):
     renderer_classes = api_settings.DEFAULT_RENDERER_CLASSES + [PaginatedCSVRenderer]
     serializer_class = CountPointsSerializer
     model = MapPolygon
-    permission_classes = [permissions.IsAuthenticated]#(permissions.IsAuthenticatedOrReadOnly)
+    permission_classes = [permissions.AllowAny]#(permissions.IsAuthenticatedOrReadOnly)
 
     def get_queryset(self, format=None):
         use_csv = format and format == 'csv'
@@ -201,7 +201,7 @@ class AnalyzeAreaAroundPointView(PaginatedReadOnlyModelViewSet):
     renderer_classes = api_settings.DEFAULT_RENDERER_CLASSES + [PaginatedCSVRenderer]
     serializer_class = AnalyzeAreaSerializer
     model = MapPoint
-    permission_classes = [permissions.IsAuthenticated]#(permissions.IsAuthenticatedOrReadOnly)
+    permission_classes = [permissions.AllowAny]#(permissions.IsAuthenticatedOrReadOnly)
 
     def get_queryset(self, format=None):
         #split params by which it applies to
