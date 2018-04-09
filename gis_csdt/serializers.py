@@ -1,4 +1,4 @@
-from gis_csdt.models import Dataset, MapElement, MapPoint, Tag, TagIndiv, MapPolygon, DataField, DataElement, Observation, ObservationValue, Sensor
+from gis_csdt.models import Dataset, MapElement, MapPoint, Tag, TagIndiv, MapPolygon, DataField, DataElement, Observation, ObservationValue, Sensor, DataPoint
 from gis_csdt.filter_tools import filter_request, neighboring_points, unite_radius_bubbles
 from gis_csdt.geometry_tools import circle_as_polygon
 from gis_csdt.settings import CENSUS_API_KEY
@@ -7,8 +7,10 @@ from rest_framework_gis import serializers as gis_serializers
 from django.contrib.gis.measure import Distance, Area
 from django.contrib.gis.geos import GEOSGeometry
 from django.core.exceptions import ObjectDoesNotExist
+from django.core import serializers as model_serializers
+from django.forms.models import model_to_dict
 from django.db.models import Sum, Count
-from django.http import HttpResponse, HttpRequest, HttpResponseBadRequest, HttpResponseNotAllowed
+from django.http import HttpResponse, HttpRequest, HttpResponseBadRequest, HttpResponseNotAllowed, JsonResponse
 from django import VERSION as DJANGO_VERSION
 import copy, json, urllib
 
@@ -493,14 +495,19 @@ class AnalyzeAreaSerializer(serializers.ModelSerializer):
         return data_sum
 
 class SensorSerializer(serializers.ModelSerializer):
+    name = serializers.CharField(max_length=100)
+    supplier = serializers.CharField(max_length=100)
+    model_number = serializers.CharField(max_length=100)
+    metric = serializers.CharField(max_length=100)
+    accuracy = serializers.CharField(max_length=100)
     class Meta:
         model = Sensor
-        fields = ('name','sensor_type')
-    def restore_object(self, attrs, instance=None):
-        try:
-            return Sensor.objects.get(name__iexact=attrs['name'].strip(),sensor_type__iexact=attrs['sensor_type'].strip())
-        except:
-            return Sensor(name=attrs['name'].strip(),sensor_type=attrs['sensor_type'].strip())
+        fields = ('name', 'supplier', 'model_number', 'metric', 'accuracy')
+    def create(self, attrs, instance=None):
+        sensorModel = Sensor(name=attrs['name'].strip(),supplier=attrs['supplier'].strip(),model_number=attrs['model_number'],metric=attrs['metric'],accuracy=attrs['accuracy'])
+        sensorModel.save()
+        return sensorModel
+
 class ObservationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Observation
@@ -510,6 +517,7 @@ class ObservationSerializer(serializers.ModelSerializer):
             return Observation.objects.get(mapelement_id=attrs['mapelement_id'],time=attrs['time'],accuracy=attrs['accuracy'])
         except:
             return Observation(mapelement_id=attrs['mapelement_id'],time=attrs['time'],accuracy=attrs['accuracy'])
+
 class SensedDataSerializer(serializers.ModelSerializer):
     sensor_name = serializers.CharField(source='observation__sensor__name')
     sensor_type = serializers.CharField()
@@ -523,7 +531,7 @@ class SensedDataSerializer(serializers.ModelSerializer):
         model = ObservationValue
         fields = ('sensor_name','sensor_type','mapelement','time','accuracy','value_name','value')
 
-    def restore_object(self, attrs, instance=None):
+    def create(self, attrs, instance=None):
         #check that we have enough info
         #if not set('sensor_name','sensor_type','mapelement','time','value_name','value').issubset(set(attrs.keys())):
         #    raise exceptions.ParseError()
@@ -549,7 +557,20 @@ class SensedDataSerializer(serializers.ModelSerializer):
         #create the value
         return ObservationValue(observation=observation,name=attrs['name'].strip(),value=attrs['value'])
 
+class DataPointSerializer(serializers.ModelSerializer):
+    value = serializers.DecimalField(max_digits=30, decimal_places=15)
+    sensors = SensorSerializer(many=True, read_only=True)
+    points = MapPointSerializer(many=True, read_only=True)
 
+    class Meta:
+        model = DataPoint
+        fields = ('__all__')
+
+    def create(self, attrs, instance=None):
+        thisUser = self.context['request'].user
+        datapointModel = DataPoint(value=attrs['value'], sensor=attrs['sensor'], point=attrs['point'], user_id=thisUser.id)
+        datapointModel.save()
+        return datapointModel
 
 class AnalyzeAreaNoValuesSerializer(serializers.ModelSerializer):
     point_id = serializers.CharField(source = 'mappoint.id')
@@ -657,4 +678,4 @@ class AnalyzeAreaNoValuesSerializer(serializers.ModelSerializer):
                 data_sums[dist_str]['polygons'] = poly
                 data_sums[dist_str]['land_area'] = land_area
 
-        return data_sums
+

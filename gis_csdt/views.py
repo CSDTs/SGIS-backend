@@ -6,11 +6,11 @@ from django.contrib.gis.db.models import Count
 from django.contrib.gis.geos import Polygon, Point
 from django.contrib.gis.measure import Distance, Area
 from django.core.paginator import Paginator
-from django.http import HttpResponse, HttpRequest,  HttpResponseNotAllowed
+from django.http import HttpResponse, HttpRequest,  HttpResponseNotAllowed, HttpResponseRedirect
 from django.shortcuts import render
 from gis_csdt.filter_tools import filter_request, neighboring_points
-from gis_csdt.models import Dataset, MapElement, MapPoint, Tag, MapPolygon, TagIndiv, DataField, DataElement, Observation, ObservationValue, Sensor
-from gis_csdt.serializers import TagCountSerializer, DatasetSerializer, MapPointSerializer, NewTagSerializer, MapPolygonSerializer, CountPointsSerializer, AnalyzeAreaSerializer, AnalyzeAreaNoValuesSerializer, SensedDataSerializer
+from gis_csdt.models import Dataset, MapElement, MapPoint, Tag, MapPolygon, TagIndiv, DataField, DataElement, Observation, ObservationValue, Sensor, DataPoint
+from gis_csdt.serializers import TagCountSerializer, DatasetSerializer, MapPointSerializer, NewTagSerializer, MapPolygonSerializer, CountPointsSerializer, AnalyzeAreaSerializer, AnalyzeAreaNoValuesSerializer, SensedDataSerializer, DataPointSerializer, SensorSerializer
 #import csv
 from gis_csdt.serializers import TestSerializer
 
@@ -38,7 +38,27 @@ class SensedDataViewSet(PaginatedModelViewSet):
     serializer_class = SensedDataSerializer
 
     #http://www.django-rest-framework.org/api-guide/permissions
-    permission_classes = (permissions.AllowAny,)#(permissions.IsAuthenticatedOrReadOnly)
+    permission_classes = [permissions.IsAuthenticated]#(permissions.IsAuthenticatedOrReadOnly)
+
+class NewSensorView(PaginatedModelViewSet):
+    paginate_by = PAGINATE_BY_CONST
+    paginate_by_param = PAGINATE_BY_PARAM_CONST
+    max_paginate_by = MAX_PAGINATE_BY_CONST
+    queryset = Sensor.objects.filter()
+    serializer_class = SensorSerializer
+
+    #http://www.django-rest-framework.org/api-guide/permissions
+    permission_classes = [permissions.IsAuthenticated]#(permissions.IsAuthenticatedOrReadOnly)
+
+class SubmitDataPointView(PaginatedModelViewSet):
+    paginate_by = PAGINATE_BY_CONST
+    paginate_by_param = PAGINATE_BY_PARAM_CONST
+    max_paginate_by = MAX_PAGINATE_BY_CONST
+    queryset = DataPoint.objects.all()
+    serializer_class = DataPointSerializer
+
+    #http://www.django-rest-framework.org/api-guide/permissions
+    permission_classes = [permissions.IsAuthenticated]#(permissions.IsAuthenticatedOrReadOnly)
 
 class TestView(PaginatedReadOnlyModelViewSet):
     serializer_class = TestSerializer
@@ -60,7 +80,7 @@ class NewTagViewSet(PaginatedModelViewSet):
     serializer_class = NewTagSerializer
 
     #http://www.django-rest-framework.org/api-guide/permissions
-    permission_classes = (permissions.AllowAny,)#(permissions.IsAuthenticatedOrReadOnly)
+    permission_classes = [permissions.AllowAny]#(permissions.IsAuthenticatedOrReadOnly)
 
 class TagCountViewSet(PaginatedReadOnlyModelViewSet):
     serializer_class = TagCountSerializer
@@ -91,7 +111,7 @@ class CountPointsInPolygonView(PaginatedReadOnlyModelViewSet):
     renderer_classes = api_settings.DEFAULT_RENDERER_CLASSES + [PaginatedCSVRenderer]
     serializer_class = CountPointsSerializer
     model = MapPolygon
-    permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
+    permission_classes = [permissions.AllowAny]#(permissions.IsAuthenticatedOrReadOnly)
 
     def get_queryset(self, format=None):
         use_csv = format and format == 'csv'
@@ -181,7 +201,7 @@ class AnalyzeAreaAroundPointView(PaginatedReadOnlyModelViewSet):
     renderer_classes = api_settings.DEFAULT_RENDERER_CLASSES + [PaginatedCSVRenderer]
     serializer_class = AnalyzeAreaSerializer
     model = MapPoint
-    permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
+    permission_classes = [permissions.AllowAny]#(permissions.IsAuthenticatedOrReadOnly)
 
     def get_queryset(self, format=None):
         #split params by which it applies to
@@ -220,7 +240,7 @@ class AnalyzeAreaAroundPointView(PaginatedReadOnlyModelViewSet):
 class AnalyzeAreaAroundPointNoValuesView(PaginatedReadOnlyModelViewSet):
     serializer_class = AnalyzeAreaNoValuesSerializer
     model = MapPoint
-    permission_classes = (permissions.IsAuthenticatedOrReadOnly,)
+    permission_classes = [permissions.IsAuthenticated]#(permissions.IsAuthenticatedOrReadOnly)
 
     def get_queryset(self):
         #split params by which it applies to
@@ -256,4 +276,3 @@ class AnalyzeAreaAroundPointNoValuesView(PaginatedReadOnlyModelViewSet):
                 continue
             take_out.extend(neighboring_points(point, points, Distance(**kwargs)).exclude(id=point.id).values_list('id',flat=True))
         return points.exclude(id__in=take_out).distinct()
-
