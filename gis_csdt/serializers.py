@@ -1,4 +1,4 @@
-from gis_csdt.models import Dataset, MapElement, MapPoint, Tag, TagIndiv, MapPolygon, DataField, DataElement, Observation, ObservationValue, Sensor, DataPoint
+from gis_csdt.models import Dataset, Field, FieldOrder, MapElement, MapPoint, Tag, TagIndiv, MapPolygon, Sensor, DataPoint
 from gis_csdt.filter_tools import filter_request, neighboring_points, unite_radius_bubbles
 from gis_csdt.geometry_tools import circle_as_polygon
 from gis_csdt.settings import CENSUS_API_KEY
@@ -23,30 +23,6 @@ else:
     def get_function(function_name):
         return function_name
 
-'''class TagSerializer(serializers.ModelSerializer):
-    def __init__(self, *args, **kwargs):
-        many = kwargs.pop('many', True)
-        super(TagSerializer, self).__init__(many=many, *args, **kwargs)
-
-    class Meta:
-        model = TagIndiv
-        fields = ('mappoint','mappolygon','tag')'''
-
-'''class MapElementIdField(serializers.WritableField):
-    def __init__(self, *args,**kwargs):
-        self.field = kwargs.pop('field')
-        super(MapElementIdField, self).__init__(*args, **kwargs)
-    def to_native(self, obj):
-        try:
-            r = getattr(obj,self.field)
-            return r.id
-        except ObjectDoesNotExist:
-            return None
-    def from_native(self, data):
-        try:
-            return MapElement.objects.get(id=int(data))
-        except (ObjectDoesNotExist, ValueError):
-            return None'''
 
 class NewTagSerializer(serializers.ModelSerializer):
     #mappolygon = MapElementIdField(required=False, source='mapelement_id', field='mappolygon')
@@ -88,12 +64,40 @@ class NewTagSerializer(serializers.ModelSerializer):
 
 class TagCountSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
-        model = Tag 
+        model = Tag
         fields = ['dataset','tag','count']
+
+class FieldSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Field
+        fields = ['dataset','tag','count']
+
+class FieldOrderInlineSerializer(serializers.PrimaryKeyRelatedField, serializers.ModelSerializer):
+    field = FieldSerializer();
+    rank = serializers.IntegerField()
+
+    class Meta:
+        model = FieldOrder
+        fields = ['field','rank']
+
+    def to_representation(self, obj):
+        if hasattr(obj, 'field'):
+            return obj.field.useName + "= \"" + obj.field.setName + "\""
+        if hasattr(obj, 'useName'):
+            return obj.useName + "= '" + obj.setName + "'"
+
+class FieldOrderSerializer(serializers.ModelSerializer):
+    field = FieldSerializer();
+
+    class Meta:
+        model = FieldOrder
+        fields = ['field','rank']
 
 class DatasetSerializer(serializers.ModelSerializer):
     tags = serializers.SerializerMethodField(get_function('get_tags'))
     count = serializers.SerializerMethodField(get_function('get_count'))
+    fields = FieldOrderInlineSerializer(many=True, queryset=FieldOrder.objects.all())
+
     def get_tags(self, dataset):
         #build nested distinct list
         return Tag.objects.filter(approved=True, dataset=dataset).order_by('-count').values_list('tag',flat=True)
@@ -104,7 +108,8 @@ class DatasetSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Dataset
-        fields = ('id','name','cached','count','field1_en','field2_en','field3_en', 'tags')
+        fields = ('id','name','cached','count', 'tags', 'fields')
+        read_only_fields = ('fields',)
 
 class MapPointSerializer(serializers.HyperlinkedModelSerializer):
     latitude = serializers.DecimalField(source = 'mappoint.lat', max_digits=18, decimal_places=15)
@@ -126,7 +131,7 @@ class MapPointSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         #id_field = False
         #geo_field = 'point'
-        model = MapPoint 
+        model = MapPoint
         fields = ('dataset','id','name','latitude','longitude','street','city','state','zipcode','county','field1','field2','field3','tags')
 
 class TestSerializer(gis_serializers.GeoFeatureModelSerializer):
@@ -140,28 +145,6 @@ class TestSerializer(gis_serializers.GeoFeatureModelSerializer):
             return {'street':mapelement.mappoint.street,'city':mapelement.mappoint.city,'state':mapelement.mappoint.state,'zipcode':mapelement.mappoint.zipcode,'county':mapelement.mappoint.county}
         return {}
 
-    def get_data(self, mapelement):
-        data = {}
-        child = mapelement.mappoint if hasattr(mapelement,'mappoint') else mapelement.mappolygon
-        dataset = Dataset.objects.get(id=mapelement.dataset_id)
-        dataelements = DataElement.objects.filter(mapelement_id=mapelement.id)
-
-        if dataset.field1_name != '' and (child.field1 != '' or child.field1 is not None):
-            data[dataset.field1_en] = child.field1
-        if dataset.field2_name != '' and (child.field2 != '' or child.field2 is not None):
-            data[dataset.field2_en] = child.field2
-        if hasattr(mapelement,'mappoint') and dataset.field3_name != '' and (child.field3 != '' or child.field3 is not None):
-            data[dataset.field3_en] = child.field3
-
-        params = self.context.get('request', None).QUERY_PARAMS
-        if 'data' in params and params['data'] == 'all':
-            for de in dataelements:
-                for ft, field_name in {DataField.INTEGER: 'int_data', DataField.FLOAT: 'float_data', DataField.STRING: 'char_data'}.iteritems():
-                    if de.datafield.field_type == ft:
-                        data[de.datafield.field_en] = getattr(de,field_name)
-
-        return data
-
     def get_tags(self, mapelement):
         #build nested distinct list
         return Tag.objects.filter(approved=True, tagindiv__mapelement=mapelement).distinct('tag').values_list('tag',flat=True)
@@ -174,7 +157,7 @@ class TestSerializer(gis_serializers.GeoFeatureModelSerializer):
     class Meta:
         id_field = 'id'
         geo_field = 'geom'
-        model = MapElement 
+        model = MapElement
         fields = ('dataset','id','name','address','data','tags')
 
 class MapPolygonSerializer(gis_serializers.GeoFeatureModelSerializer):
@@ -182,7 +165,7 @@ class MapPolygonSerializer(gis_serializers.GeoFeatureModelSerializer):
     longitude = serializers.DecimalField(source = 'mappolygon.lon', max_digits=18, decimal_places=15)
     field1 = serializers.CharField(source = 'mappolygon.field1')
     field2 = serializers.CharField(source = 'mappolygon.field2')
-    
+
     mpoly = gis_serializers.GeometryField(source = 'mappolygon.mpoly')
 
     tags = serializers.SerializerMethodField(get_function('get_tags'))
@@ -194,7 +177,7 @@ class MapPolygonSerializer(gis_serializers.GeoFeatureModelSerializer):
     class Meta:
         id_field = False
         geo_field = 'mpoly'
-        model = MapPolygon 
+        model = MapPolygon
         fields = ('id','dataset','remote_id','name','latitude','longitude','field1','field2','tags')
 
 class CountPointsSerializer(serializers.ModelSerializer):
@@ -216,25 +199,6 @@ class CountPointsSerializer(serializers.ModelSerializer):
 
         c = {mappolygon.dataset.field1_en : mappolygon.mappolygon.field1, mappolygon.dataset.field2_en : mappolygon.mappolygon.field2}
 
-        datafields = DataField.objects.filter(dataset=mappolygon.dataset)
-        #get other data
-        for df in datafields:
-            data = None
-            if df.field_type == DataField.INTEGER:
-                element = DataElement.objects.filter(datafield = df).filter(mapelement=mappolygon)
-                if element:
-                    data = element[0].int_data
-            elif df.field_type == DataField.FLOAT:
-                element = DataElement.objects.filter(datafield = df).filter(mapelement=mappolygon)
-                if element:
-                    data = element[0].float_data
-            else:
-                element = DataElement.objects.filter(datafield = df).filter(mapelement=mappolygon)
-                if element:
-                    data = element[0].char_data
-            if data:
-                c[df.field_en] = data
-        
         points = filter_request(params,'mappoint').filter(point__intersects=mappolygon.mappolygon.mpoly)
         all_tags = None
         if 'tag' in params:
@@ -283,13 +247,13 @@ class AnalyzeAreaSerializer(serializers.ModelSerializer):
     areaAroundPoint = serializers.SerializerMethodField(get_function('get_areaAroundPoint'))
 
     class Meta:
-        model = MapPoint 
+        model = MapPoint
         fields = ('street','city','state','zipcode','county','field1','field2','field3','tags','areaAroundPoint')
 
     def get_tags(self, mappoint):
         #build nested distinct list
         return Tag.objects.filter(approved=True, tagindiv__mapelement=mappoint).distinct('tag').values('tag')
-    
+
     def get_areaAroundPoint(self, mappoint):
         request = self.context.get('request', None)
 
@@ -356,20 +320,6 @@ class AnalyzeAreaSerializer(serializers.ModelSerializer):
             data_sums[dist_str]['land area (m2)'] = sum([int(i) for i in MapPolygon.objects.filter(dataset_id__exact=dataset_id,remote_id__in=poly).values_list('field1',flat=True)])
             if data_sums[dist_str]['polygon count'] > 0:
                 data_sums[dist_str]['polygons'] = str(list(poly))
-                datafields = DataField.objects.filter(dataset_id__exact=dataset_id).exclude(field_type__exact=DataField.STRING)
-                for field in datafields:
-                    if field.field_longname not in data_sums[dist_str]:
-                        data_sums[dist_str][field.field_longname] = {}
-                    if field.field_type == DataField.INTEGER:
-                        data = DataElement.objects.filter(datafield_id=field.id,mapelement__remote_id__in=poly).aggregate(sum=Sum('int_data'),dsum=Sum('denominator__int_data'))
-                        #print data['sum'], data['dsum']
-                    elif field.field_type == DataField.FLOAT:
-                        data = DataElement.objects.filter(datafield_id=field.id,mapelement__remote_id__in=poly).aggregate(sum=Sum('float_data'),dsum=Sum('denominator__float_data'))
-                    else:
-                        continue
-                    data_sums[dist_str][field.field_longname][field.field_en] = data['sum']
-                    data_sums[dist_str][field.field_longname]['total']= data['dsum']
-
         return data_sums
 
     def area_around_point2(self, mappoint):
@@ -508,55 +458,6 @@ class SensorSerializer(serializers.ModelSerializer):
         sensorModel.save()
         return sensorModel
 
-class ObservationSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Observation
-        fields = ('mapelement','time','accuracy')
-    def restore_object(self, attrs, instance=None):
-        try:
-            return Observation.objects.get(mapelement_id=attrs['mapelement_id'],time=attrs['time'],accuracy=attrs['accuracy'])
-        except:
-            return Observation(mapelement_id=attrs['mapelement_id'],time=attrs['time'],accuracy=attrs['accuracy'])
-
-class SensedDataSerializer(serializers.ModelSerializer):
-    sensor_name = serializers.CharField(source='observation__sensor__name')
-    sensor_type = serializers.CharField()
-    mapelement = serializers.IntegerField()
-    time = serializers.DateTimeField()
-    accuracy = serializers.FloatField(required=False)
-    value_name = serializers.CharField(source='name')
-    value = serializers.FloatField()
-
-    class Meta:
-        model = ObservationValue
-        fields = ('sensor_name','sensor_type','mapelement','time','accuracy','value_name','value')
-
-    def create(self, attrs, instance=None):
-        #check that we have enough info
-        #if not set('sensor_name','sensor_type','mapelement','time','value_name','value').issubset(set(attrs.keys())):
-        #    raise exceptions.ParseError()
-        #find the mappoint
-        try:
-            mp = MapElement.objects.get(id=attrs['mapelement'])
-        except:
-            raise exceptions.ParseError()
-        #find or create the sensor
-        sensor = Sensor.objects.filter(name__iexact=attrs['observation__sensor__name'].strip(),sensor_type__iexact=attrs['sensor_type'].strip())
-        if len(sensor)==0:
-            sensor = Sensor(name=attrs['observation__sensor__name'].strip(),sensor_type=attrs['sensor_type'].strip())
-            sensor.save()
-        else:
-            sensor = sensor[0]
-        #find or create the observation
-        observation = Observation.objects.filter(mapelement_id=mp.id,sensor_id=sensor.id,time__exact=attrs['time'],accuracy__exact=attrs['accuracy'])
-        if len(observation)==0:
-            observation = Observation(mapelement=mp,sensor=sensor,time=attrs['time'],accuracy=attrs['accuracy'])
-            observation.save()
-        else:
-            observation = observation[0]
-        #create the value
-        return ObservationValue(observation=observation,name=attrs['name'].strip(),value=attrs['value'])
-
 class DataPointSerializer(serializers.ModelSerializer):
     value = serializers.DecimalField(max_digits=30, decimal_places=15)
     sensors = SensorSerializer(many=True, read_only=True)
@@ -577,14 +478,14 @@ class AnalyzeAreaNoValuesSerializer(serializers.ModelSerializer):
     areaAroundPoint = serializers.SerializerMethodField(get_function('get_areaAroundPoint'))
 
     class Meta:
-        model = MapPoint 
+        model = MapPoint
         fields = ('point_id','areaAroundPoint')
 
 
     def get_tags(self, mappoint):
         #build nested distinct list
         return Tag.objects.filter(approved=True, tagindiv__mapelement=mappoint).distinct('tag').values('tag')
-    
+
     def get_areaAroundPoint(self, mappoint):
         request = self.context.get('request', None)
         years = request.GET.getlist('year')
@@ -633,15 +534,15 @@ class AnalyzeAreaNoValuesSerializer(serializers.ModelSerializer):
         data_sums = {'points':[], 'view url':'http://127.0.0.1:8000/around-point/%d/' %(all_points[0].id)}
         for p in all_points:
             data_sums['points'].append({'id':p.id,
-                                        'name':p.name, 
-                                        'street':p.mappoint.street, 
-                                        'city':p.mappoint.city, 
-                                        'state':p.mappoint.state, 
-                                        'zipcode':p.mappoint.zipcode, 
-                                        'county':p.mappoint.county, 
-                                        'field1':p.mappoint.field1, 
-                                        'field2':p.mappoint.field2, 
-                                        'field3':p.mappoint.field3, 
+                                        'name':p.name,
+                                        'street':p.mappoint.street,
+                                        'city':p.mappoint.city,
+                                        'state':p.mappoint.state,
+                                        'zipcode':p.mappoint.zipcode,
+                                        'county':p.mappoint.county,
+                                        'field1':p.mappoint.field1,
+                                        'field2':p.mappoint.field2,
+                                        'field3':p.mappoint.field3,
                                         'tags':Tag.objects.filter(approved=True, tagindiv__mapelement=mappoint).distinct('tag').values('tag')})
         already_accounted = set()
         boundary = unite_radius_bubbles(all_points,dist_objs)
@@ -677,5 +578,3 @@ class AnalyzeAreaNoValuesSerializer(serializers.ModelSerializer):
             if len(poly) > 0:
                 data_sums[dist_str]['polygons'] = poly
                 data_sums[dist_str]['land_area'] = land_area
-
-

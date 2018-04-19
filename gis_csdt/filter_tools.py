@@ -1,8 +1,11 @@
 from django.contrib.gis.geos import Polygon, Point
 from gis_csdt.geometry_tools import circle_as_polygon
-from gis_csdt.models import Dataset, MapElement, MapPoint, Tag, MapPolygon, TagIndiv, DataField, DataElement
+from gis_csdt.models import Dataset, MapElement, MapPoint, Tag, MapPolygon, TagIndiv
 from django.contrib.gis.measure import Distance
+from rest_framework.exceptions import ParseError
 from django.db.models import Q
+
+RECOGNIZED_PARAMETERS = ['max_lat', 'min_lat', 'max_lon', 'min_lon', 'dataset', 'radius', 'remote_id' 'tags', 'tag', 'state', 'zipcode']
 
 def filter_request(parameters, model_type):
 
@@ -18,7 +21,7 @@ def filter_request(parameters, model_type):
     else:
         matchall = False
 
-    
+
     queryset = MapElement.objects.none()
     if tags:
         tags = tags.split(',')
@@ -103,7 +106,7 @@ def filter_request(parameters, model_type):
         temp = parameters.split(',')
         try:
             if len(temp) != 2:
-                raise 
+                raise
             temp[0] = float(temp[0])
             temp[1] = float(temp[1])
             center = Point(temp[0],temp[1])
@@ -133,3 +136,16 @@ def unite_radius_bubbles(points, distances):
         for p in points[1:]:
             geometry[d] = geometry[d].union(circle_as_polygon(lat = p.point.y, lon = p.point.x, distance = d))
     return geometry
+
+def check_query_params(query_params):
+    print 'check'
+    mappoint_params = {}
+    for (param, result) in query_params:
+        if param in RECOGNIZED_PARAMETERS:
+            mappoint_params[param] = result
+    # if none of this is specified, this is just too much
+    print len(mappoint_params)
+    if len(mappoint_params) == 0:
+        raise ParseError(
+            'Please limit your scope by specifying parameters.')
+    return mappoint_params

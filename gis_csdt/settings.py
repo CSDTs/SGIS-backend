@@ -116,6 +116,7 @@ INSTALLED_APPS = (
     'rest_framework',
     'django_extensions',
     'django.contrib.gis',
+    'django_teams',
     'gis_csdt',
 )
 
@@ -165,8 +166,8 @@ REST_FRAMEWORK = {
 }
 
 
-TEMPLATES = [ 
-    {   
+TEMPLATES = [
+    {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [os.path.join(PROJECT_ROOT, 'templates')],
         'APP_DIRS': True,
@@ -176,9 +177,9 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-            ],  
-        },  
-    },  
+            ],
+        },
+    },
 ]
 
 try:

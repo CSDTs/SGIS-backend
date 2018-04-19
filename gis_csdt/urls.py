@@ -7,17 +7,13 @@ admin.autodiscover()
 router = routers.DefaultRouter()
 router.register(r'api-ds', views.DatasetViewSet)
 router.register(r'api-mp', views.MapPointViewSet, base_name = 'mappoint')
-router.register(r'api-newtag', views.NewTagViewSet)
 router.register(r'api-poly', views.MapPolygonViewSet, base_name = 'mappolygon')
 router.register(r'api-tag', views.NewTagViewSet)
-router.register(r'api-test', views.TestView, base_name = 'mp')
 router.register(r'api-count', views.CountPointsInPolygonView, base_name = 'count_points')
-#router.register(r'api-tag/count', views.TagCountViewSet, base_name = 'tag')
 router.register(r'api-dist', views.AnalyzeAreaAroundPointView, base_name = 'area')
 router.register(r'api-dist2', views.AnalyzeAreaAroundPointNoValuesView, base_name = 'area2')
-router.register(r'api-sensors', views.SensedDataViewSet)
 router.register(r'api-newsensor', views.NewSensorView)
-router.register(r'api-datapoint', views.SubmitDataPointView)
+router.register(r'api-datapoint', views.SubmitDataPointView, base_name = 'datapoint')
 
 urlpatterns = [
     url(r'^', include(router.urls)),
