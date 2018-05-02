@@ -15,6 +15,7 @@ from gis_csdt.serializers import TagCountSerializer, DatasetSerializer, MapPoint
 #import csv
 from gis_csdt.serializers import TestSerializer
 from django.views.decorators.csrf import csrf_exempt
+from twilio.twiml.messaging_response import MessagingResponse
 
 ###constants for pagination
 PAGINATE_BY_CONST = 100
@@ -68,7 +69,7 @@ def SMSSubmitDataPointView(request):
     resp = MessagingResponse()
 
     # Add a text message
-    msg = resp.message(request)
+    msg = resp.message(request.POST)
 
     return HttpResponse(str(resp))
 
