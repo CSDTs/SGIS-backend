@@ -5,6 +5,7 @@ from rest_framework.exceptions import ParseError #, APIException
 from django.contrib.gis.db.models import Count
 from django.contrib.gis.geos import Polygon, Point
 from django.contrib.gis.measure import Distance, Area
+from django.views.generic.edit import CreateView,
 from django.core.paginator import Paginator
 from django.http import HttpResponse, HttpRequest,  HttpResponseNotAllowed, HttpResponseRedirect
 from django.shortcuts import render
@@ -13,6 +14,18 @@ from gis_csdt.models import Dataset, MapElement, MapPoint, Tag, MapPolygon, TagI
 from gis_csdt.serializers import TagCountSerializer, DatasetSerializer, MapPointSerializer, NewTagSerializer, MapPolygonSerializer, CountPointsSerializer, AnalyzeAreaSerializer, AnalyzeAreaNoValuesSerializer, SensedDataSerializer, DataPointSerializer, SensorSerializer
 #import csv
 from gis_csdt.serializers import TestSerializer
+
+
+# Start our TwiML response
+resp = MessagingResponse()
+
+# Add a text message
+msg = resp.message("Check out this sweet owl!")
+
+# Add a picture message
+msg.media("https://demo.twilio.com/owl.png")
+
+return HttpResponse(str(resp))
 
 ###constants for pagination
 PAGINATE_BY_CONST = 100
@@ -59,6 +72,16 @@ class SubmitDataPointView(PaginatedModelViewSet):
 
     #http://www.django-rest-framework.org/api-guide/permissions
     permission_classes = [permissions.IsAuthenticated]#(permissions.IsAuthenticatedOrReadOnly)
+
+@csrf_exempt
+def SMSSubmitDataPointView(request):
+    # Start our TwiML response
+    resp = MessagingResponse()
+
+    # Add a text message
+    msg = resp.message(request)
+
+    return HttpResponse(str(resp))
 
 class TestView(PaginatedReadOnlyModelViewSet):
     serializer_class = TestSerializer

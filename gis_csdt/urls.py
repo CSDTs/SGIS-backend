@@ -18,6 +18,7 @@ router.register(r'api-dist2', views.AnalyzeAreaAroundPointNoValuesView, base_nam
 router.register(r'api-sensors', views.SensedDataViewSet)
 router.register(r'api-newsensor', views.NewSensorView)
 router.register(r'api-datapoint', views.SubmitDataPointView)
+router.register(r'api-SMS', views.SMSSubmitDataPointView)
 
 urlpatterns = [
     url(r'^', include(router.urls)),
