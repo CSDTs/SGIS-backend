@@ -18,7 +18,7 @@ class Field(models.Model):
     setName = models.CharField(max_length=150, default='name')
 
     def __unicode__(self):
-        return self.field.useName + "= \"" + self.field.setName + "\""
+        return self.useName + "= \"" + self.setName + "\""
 
 
 class Dataset(models.Model):

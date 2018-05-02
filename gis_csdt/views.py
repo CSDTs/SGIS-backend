@@ -9,8 +9,8 @@ from django.core.paginator import Paginator
 from django.http import HttpResponse, HttpRequest,  HttpResponseNotAllowed, HttpResponseRedirect
 from django.shortcuts import render
 from gis_csdt.filter_tools import filter_request, neighboring_points, check_query_params
-from gis_csdt.models import Dataset, MapElement, MapPoint, Tag, MapPolygon, TagIndiv, Sensor, DataPoint
-from gis_csdt.serializers import TagCountSerializer, DatasetSerializer, MapPointSerializer, NewTagSerializer, MapPolygonSerializer, CountPointsSerializer, AnalyzeAreaSerializer, AnalyzeAreaNoValuesSerializer, DataPointSerializer, SensorSerializer
+from gis_csdt.models import Dataset, MapElement, MapPoint, Tag, MapPolygon, TagIndiv, Sensor, DataPoint, Field, FieldOrder
+from gis_csdt.serializers import TagCountSerializer, DatasetSerializer, MapPointSerializer, NewTagSerializer, MapPolygonSerializer, CountPointsSerializer, AnalyzeAreaSerializer, AnalyzeAreaNoValuesSerializer, DataPointSerializer, SensorSerializer, FieldSerializer, FieldOrderSerializer
 #import csv
 from gis_csdt.serializers import TestSerializer
 
@@ -19,6 +19,29 @@ PAGINATE_BY_CONST = 100
 PAGINATE_BY_PARAM_CONST = 'page_size'
 MAX_PAGINATE_BY_CONST = 500
 # classes for pagination
+
+
+
+class DatasetModificationPermission(permissions.BasePermission):
+    message = 'You don\'t have permission to edit this dataset'
+
+    def has_permission(self, request, view):
+        if request.method not in permissions.SAFE_METHODS:
+            try:
+                dataset = Dataset.objects.get(name=request.data['dataset'])
+                user = request.user
+                return dataset.user == user or dataset.team in user.team_member.all()
+            except:
+                return False
+        return True
+
+    def has_object_permission(self, request, view, obj):
+        if request.method not in permissions.SAFE_METHODS:
+            if hasattr(obj, "dataset"):
+                user = request.user
+                dataset = obj.dataset
+                return dataset.user == user or dataset.team in user.team_member.all()
+        return True
 
 
 class PaginatedModelViewSet(viewsets.ModelViewSet):
@@ -47,53 +70,20 @@ class NewSensorView(PaginatedModelViewSet):
 
 
 class SubmitDataPointView(PaginatedModelViewSet):
-    paginate_by = PAGINATE_BY_CONST
-    paginate_by_param = PAGINATE_BY_PARAM_CONST
-    max_paginate_by = MAX_PAGINATE_BY_CONST
     serializer_class = DataPointSerializer
 
     def get_queryset(self):
         parameters = check_query_params(self.request.query_params.items())
         queryset = DataPoint.objects.all()
-        if 'dataset' in parameters:
-            dataset_list = parameters['dataset'].strip().split(',')
-            if type(dataset_list) is not list:
-                dataset_list = [dataset_list]
-            for dataset in dataset_list:
-                try:
-                    r = int(dataset)
-                    queryset = queryset.filter(point__dataset__id__exact=r)
-                except:
-                    queryset = queryset.filter(
-                        dataset__name__icontains=dataset)
-
-        if 'radius' in parameters and 'center' in parameters:
-            try:
-                radius = int(parameters['radius'])
-            except:
-                return HttpResponseBadRequest('Invalid radius. Only integers accepted.')
-            temp = parameters.split(',')
-            try:
-                if len(temp) != 2:
-                    raise
-                temp[0] = float(temp[0])
-                temp[1] = float(temp[1])
-                center = Point(temp[0], temp[1])
-            except:
-                return HttpResponseBadRequest('Invalid center. Format is: center=lon,lat')
-            queryset = queryset.filter(
-                point__point__distance_lte=(center, Distance(mi=radius)))
-        elif 'radius' in parameters or 'center' in parameters:
-            return HttpResponseBadRequest('If a center or radius is specified, the other must also be specified.')
-
-        if 'max_lat' in bb and 'min_lat' in bb and 'max_lon' in bb and 'min_lon' in bb:
-            geom = Polygon.from_bbox(
-                (bb['min_lon'], bb['min_lat'], bb['max_lon'], bb['max_lat']))
-            queryset = queryset.filter(point__point__within=geom)
+        queryset = dataset_filter(queryset, parameters)
+        queryset = radius_filter(queryset, parameters)
+        queryset = square_filter(queryset, parameters, 'mappoint')
+        return queryset
 
     # http://www.django-rest-framework.org/api-guide/permissions
     # (permissions.IsAuthenticatedOrReadOnly)
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
 
 
 class TestView(PaginatedReadOnlyModelViewSet):
@@ -117,9 +107,21 @@ class NewTagViewSet(PaginatedModelViewSet):
     queryset = TagIndiv.objects.filter(tag__approved=True).distinct('tag')
     serializer_class = NewTagSerializer
 
-    # http://www.django-rest-framework.org/api-guide/permissions
-    # (permissions.IsAuthenticatedOrReadOnly)
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+
+class FieldViewSet(PaginatedModelViewSet):
+    queryset = Field.objects.all()
+    serializer_class = FieldSerializer
+
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+
+class FieldOrderViewSet(PaginatedModelViewSet):
+    queryset = FieldOrder.objects.all()
+    serializer_class = FieldOrderSerializer
+
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly, DatasetModificationPermission]
 
 
 class TagCountViewSet(PaginatedReadOnlyModelViewSet):
@@ -139,6 +141,8 @@ class MapPointViewSet(PaginatedModelViewSet):
     serializer_class = MapPointSerializer
     model = MapPoint
 
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
     def get_queryset(self):
         return filter_request(self.request.query_params, 'mappoint')
 
@@ -146,6 +150,8 @@ class MapPointViewSet(PaginatedModelViewSet):
 class MapPolygonViewSet(PaginatedModelViewSet):
     serializer_class = MapPolygonSerializer
     model = MapPolygon
+
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
     def get_queryset(self):
         return filter_request(self.request.query_params, 'mappolygon')
@@ -218,7 +224,6 @@ class CountPointsInPolygonView(PaginatedReadOnlyModelViewSet):
                                 tagindiv__tag__tag=tag)
                         row.append(temp.filter(
                             point__intersects=poly.mpoly).count())
-                    print points.filter(point__intersects=poly.mpoly).query
                     if mult_tags:
                         row.append(points.filter(
                             point__intersects=poly.mpoly).count())
@@ -234,7 +239,6 @@ class AnalyzeAreaAroundPointView(PaginatedReadOnlyModelViewSet):
         [PaginatedCSVRenderer]
     serializer_class = AnalyzeAreaSerializer
     model = MapPoint
-    # (permissions.IsAuthenticatedOrReadOnly)
     permission_classes = [permissions.AllowAny]
 
     def get_queryset(self, format=None):
@@ -294,7 +298,6 @@ class AnalyzeAreaAroundPointNoValuesView(PaginatedReadOnlyModelViewSet):
             distances = [1, 3, 5]
             unit = 'km'
         else:
-            print distances
             distances.sort()
         kwargs = {unit: distances[-1]}
         take_out = []

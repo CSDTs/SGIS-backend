@@ -67,10 +67,12 @@ class TagCountSerializer(serializers.HyperlinkedModelSerializer):
         model = Tag
         fields = ['dataset','tag','count']
 
+
 class FieldSerializer(serializers.ModelSerializer):
     class Meta:
         model = Field
-        fields = ['dataset','tag','count']
+        fields = ['useName','setName']
+
 
 class FieldOrderInlineSerializer(serializers.PrimaryKeyRelatedField, serializers.ModelSerializer):
     field = FieldSerializer();
@@ -86,17 +88,20 @@ class FieldOrderInlineSerializer(serializers.PrimaryKeyRelatedField, serializers
         if hasattr(obj, 'useName'):
             return obj.useName + "= '" + obj.setName + "'"
 
+
 class FieldOrderSerializer(serializers.ModelSerializer):
-    field = FieldSerializer();
+    dataset = serializers.SlugRelatedField(queryset=Dataset.objects.all(), slug_field="name")
+    field = serializers.SlugRelatedField(queryset=Field.objects.all(), slug_field="useName")
 
     class Meta:
         model = FieldOrder
-        fields = ['field','rank']
+        fields = ['dataset', 'field', 'rank']
 
 class DatasetSerializer(serializers.ModelSerializer):
     tags = serializers.SerializerMethodField(get_function('get_tags'))
     count = serializers.SerializerMethodField(get_function('get_count'))
     fields = FieldOrderInlineSerializer(many=True, queryset=FieldOrder.objects.all())
+
 
     def get_tags(self, dataset):
         #build nested distinct list

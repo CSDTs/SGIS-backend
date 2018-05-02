@@ -14,6 +14,8 @@ router.register(r'api-dist', views.AnalyzeAreaAroundPointView, base_name = 'area
 router.register(r'api-dist2', views.AnalyzeAreaAroundPointNoValuesView, base_name = 'area2')
 router.register(r'api-newsensor', views.NewSensorView)
 router.register(r'api-datapoint', views.SubmitDataPointView, base_name = 'datapoint')
+router.register(r'api-fields', views.FieldViewSet, base_name = 'fields')
+router.register(r'api-fieldorder', views.FieldOrderViewSet, base_name = 'fieldOrder')
 
 urlpatterns = [
     url(r'^', include(router.urls)),
