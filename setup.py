@@ -21,7 +21,7 @@ def read_requirements(fname):
 setup(
     zip_safe = False,
     name = "gis_csdt",
-    version = "1.2.2",
+    version = "1.2.3",
     author = "Currently SIlly Inventor, formally Kathleen Tully",
     author_email = "SillyInventor@gmail.com",
     description = "Mapping software to encourage critical thinking",
