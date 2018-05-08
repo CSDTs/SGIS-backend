@@ -1,5 +1,5 @@
 from django.contrib import admin
-from gis_csdt.models import Dataset, MapPoint, Tag, MapPolygon, TagIndiv, DataField, DataElement, Sensor, DataPoint
+from gis_csdt.models import Dataset, MapPoint, PhoneNumber, Tag, MapPolygon, TagIndiv, DataField, DataElement, Sensor, DataPoint
 
 class DatasetAdmin(admin.ModelAdmin):
     fieldsets = [
@@ -20,3 +20,4 @@ admin.site.register(DataField)
 admin.site.register(DataElement)
 admin.site.register(Sensor)
 admin.site.register(DataPoint)
+admin.site.register(PhoneNumber)
