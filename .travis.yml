@@ -23,9 +23,9 @@ install:
   - pip install setuptools --upgrade
   - "bash bin/travis.sh"
   - python -m pip install --upgrade pip
-  - pip install --upgrade -r requirements.txt
-  - pip install coveralls
-  - pip install flake8
+  - python -m pip install --upgrade -r requirements.txt
+  - python -m pip install coveralls
+  - python -m pip install flake8
   - sudo service postgresql restart
 
 script:
