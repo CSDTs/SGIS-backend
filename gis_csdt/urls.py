@@ -15,7 +15,6 @@ router.register(r'api-count', views.CountPointsInPolygonView, base_name = 'count
 #router.register(r'api-tag/count', views.TagCountViewSet, base_name = 'tag')
 router.register(r'api-dist', views.AnalyzeAreaAroundPointView, base_name = 'area')
 router.register(r'api-dist2', views.AnalyzeAreaAroundPointNoValuesView, base_name = 'area2')
-router.register(r'api-sensors', views.SensedDataViewSet)
 router.register(r'api-newsensor', views.NewSensorView)
 router.register(r'api-datapoint', views.SubmitDataPointView)
 
