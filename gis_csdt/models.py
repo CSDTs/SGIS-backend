@@ -49,6 +49,7 @@ class Dataset(models.Model):
 					result += json_item[field].strip() + ' '
 		return result.strip()
 
+	'''
 	def update_mappoints(self):
 		if self.url == '': #this can only be done through manual updates
 			return
@@ -173,6 +174,7 @@ class Dataset(models.Model):
 			self.needs_geocoding = False
 		print '--%d added, %d geocoded--' %(added,geocoded)
 		self.save()
+	'''
 
 	def should_update(self):
 		if self.cached is None or self.cached == '':
