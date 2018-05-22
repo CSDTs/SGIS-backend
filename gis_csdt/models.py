@@ -6,8 +6,18 @@ from django.db.models import Q#, Count
 from django.contrib.auth import get_user_model
 
 import json, urllib, pycurl, decimal  
+ 
+class Location(models.Model):
+	street_field = models.CharField(max_length=50,default='street')
+	city_field = models.CharField(max_length=50,default='city')
+	state_field = models.CharField(max_length=50,default='state')
+	zipcode_field = models.CharField(max_length=50,default='zip')
+	county_field = models.CharField(max_length=50,default='county')
 
-
+class GeoCoordinate(models.Model):
+	lat_field = models.CharField(max_length=50,default='latitude')
+	lon_field = models.CharField(max_length=50,default='longitude')
+		
 BATCH_SIZE = 5000
 class Dataset(models.Model):
 	name = models.CharField(max_length=200)
@@ -16,14 +26,7 @@ class Dataset(models.Model):
 	cache_max_age = models.IntegerField('age when cache should be replaced in days',default=1)
 	#field names
 	remote_id_field = models.CharField('column name of key field on the remote server',blank=True, max_length=50, default='id')
-	name_field = models.CharField(max_length=50,default='name')
-	lat_field = models.CharField(max_length=50,default='latitude')
-	lon_field = models.CharField(max_length=50,default='longitude')
-	street_field = models.CharField(max_length=50,default='street')
-	city_field = models.CharField(max_length=50,default='city')
-	state_field = models.CharField(max_length=50,default='state')
-	zipcode_field = models.CharField(max_length=50,default='zip')
-	county_field = models.CharField(max_length=50,default='county')
+	name_field = models.CharField(max_length=50,default='name')	
 	field1_en = models.CharField(blank=True,max_length=150)
 	field1_name = models.CharField(blank=True,max_length=50)
 	field2_en = models.CharField(blank=True,max_length=150)
@@ -31,6 +34,9 @@ class Dataset(models.Model):
 	field3_en = models.CharField(blank=True,max_length=150)
 	field3_name = models.CharField(blank=True,max_length=50)
 	needs_geocoding = models.BooleanField(default = False)
+
+	location = models.ForeignKey(Location)
+	geo_coordinate = models.ForeignKey(GeoCoordinate)
 
 	def __unicode__(self):  # Python 3: def __str__(self):
 		return self.name
