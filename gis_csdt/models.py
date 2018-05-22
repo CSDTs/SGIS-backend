@@ -8,15 +8,15 @@ from django.contrib.auth import get_user_model
 import json, urllib, pycurl, decimal  
  
 class Location(models.Model):
-	street_field = models.CharField(max_length=50,default='street',null=True)
-	city_field = models.CharField(max_length=50,default='city',null=True)
-	state_field = models.CharField(max_length=50,default='state',null=True)
-	zipcode_field = models.CharField(max_length=50,default='zip',null=True)
-	county_field = models.CharField(max_length=50,default='county',null=True)
+	street_field = models.CharField(max_length=50,default='street',blank=True)
+	city_field = models.CharField(max_length=50,default='city',blank=True)
+	state_field = models.CharField(max_length=50,default='state',blank=True)
+	zipcode_field = models.CharField(max_length=50,default='zip',blank=True)
+	county_field = models.CharField(max_length=50,default='county',blank=True)
 
 class GeoCoordinate(models.Model):
-	lat_field = models.CharField(max_length=50,default='latitude',null=True)
-	lon_field = models.CharField(max_length=50,default='longitude',null=True)
+	lat_field = models.CharField(max_length=50,default='latitude',blank=True)
+	lon_field = models.CharField(max_length=50,default='longitude',blank=True)
 		
 BATCH_SIZE = 5000
 class Dataset(models.Model):
@@ -35,8 +35,8 @@ class Dataset(models.Model):
 	field3_name = models.CharField(blank=True,max_length=50)
 	needs_geocoding = models.BooleanField(default=False)
 
-	location = models.ForeignKey(Location)
-	geo_coordinate = models.ForeignKey(GeoCoordinate)
+	location = models.ForeignKey(Location, blank=True, null=True)
+	geo_coordinate = models.ForeignKey(GeoCoordinate, blank=True, null=True)
 
 	def __unicode__(self):  # Python 3: def __str__(self):
 		return self.name
