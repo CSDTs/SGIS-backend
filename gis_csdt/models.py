@@ -8,15 +8,15 @@ from django.contrib.auth import get_user_model
 import json, urllib, pycurl, decimal  
  
 class Location(models.Model):
-	street_field = models.CharField(max_length=50,default='street')
-	city_field = models.CharField(max_length=50,default='city')
-	state_field = models.CharField(max_length=50,default='state')
-	zipcode_field = models.CharField(max_length=50,default='zip')
-	county_field = models.CharField(max_length=50,default='county')
+	street_field = models.CharField(max_length=50,default='street',null=True)
+	city_field = models.CharField(max_length=50,default='city',null=True)
+	state_field = models.CharField(max_length=50,default='state',null=True)
+	zipcode_field = models.CharField(max_length=50,default='zip',null=True)
+	county_field = models.CharField(max_length=50,default='county',null=True)
 
 class GeoCoordinate(models.Model):
-	lat_field = models.CharField(max_length=50,default='latitude')
-	lon_field = models.CharField(max_length=50,default='longitude')
+	lat_field = models.CharField(max_length=50,default='latitude',null=True)
+	lon_field = models.CharField(max_length=50,default='longitude',null=True)
 		
 BATCH_SIZE = 5000
 class Dataset(models.Model):
@@ -33,7 +33,7 @@ class Dataset(models.Model):
 	field2_name = models.CharField(blank=True,max_length=50)
 	field3_en = models.CharField(blank=True,max_length=150)
 	field3_name = models.CharField(blank=True,max_length=50)
-	needs_geocoding = models.BooleanField(default = False)
+	needs_geocoding = models.BooleanField(default=False)
 
 	location = models.ForeignKey(Location)
 	geo_coordinate = models.ForeignKey(GeoCoordinate)
