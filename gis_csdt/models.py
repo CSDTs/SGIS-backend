@@ -18,7 +18,15 @@ class Location(models.Model):
 class GeoCoordinates(models.Model):
 	lat_field = models.CharField(max_length=50,default='latitude',blank=True)
 	lon_field = models.CharField(max_length=50,default='longitude',blank=True)
-		
+
+class DatasetNameField(models.Model):
+	field1_en = models.CharField(blank=True,max_length=150)
+	field1_name = models.CharField(blank=True,max_length=50)
+	field2_en = models.CharField(blank=True,max_length=150)
+	field2_name = models.CharField(blank=True,max_length=50)
+	field3_en = models.CharField(blank=True,max_length=150)
+	field3_name = models.CharField(blank=True,max_length=50)
+
 BATCH_SIZE = 5000
 class Dataset(models.Model):
 	name = models.CharField(max_length=200)
@@ -28,16 +36,11 @@ class Dataset(models.Model):
 	#field names
 	remote_id_field = models.CharField('column name of key field on the remote server',blank=True, max_length=50, default='id')
 	name_field = models.CharField(max_length=50,default='name')	
-	field1_en = models.CharField(blank=True,max_length=150)
-	field1_name = models.CharField(blank=True,max_length=50)
-	field2_en = models.CharField(blank=True,max_length=150)
-	field2_name = models.CharField(blank=True,max_length=50)
-	field3_en = models.CharField(blank=True,max_length=150)
-	field3_name = models.CharField(blank=True,max_length=50)
 	needs_geocoding = models.BooleanField(default=False)
 
 	location = models.ForeignKey(Location, blank=True, null=True)
 	coordinates = models.ForeignKey(GeoCoordinates, blank=True, null=True)
+	names = models.ForeignKey(DatasetNameField, blank=True, null=True)
 
 	def __unicode__(self):  # Python 3: def __str__(self):
 		return self.name
