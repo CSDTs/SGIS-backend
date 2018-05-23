@@ -104,7 +104,7 @@ class DatasetSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Dataset
-        fields = ('id','name','cached','count','field1_en','field2_en','field3_en', 'tags')
+        fields = ('id','name','cached','count','tags')
 
 class MapPointSerializer(serializers.HyperlinkedModelSerializer):
     latitude = serializers.DecimalField(source = 'mappoint.lat', max_digits=18, decimal_places=15)
