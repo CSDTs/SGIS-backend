@@ -1,3 +1,6 @@
+# -*- coding: utf8 -*-
+import sys
+import binascii
 from rest_framework import views, viewsets, permissions, response, pagination
 from rest_framework.settings import api_settings
 from rest_framework_csv.renderers import CSVRenderer
@@ -5,19 +8,25 @@ from rest_framework.exceptions import ParseError #, APIException
 from django.contrib.gis.db.models import Count
 from django.contrib.gis.geos import Polygon, Point
 from django.contrib.gis.measure import Distance, Area
+from django.views.generic.edit import CreateView
 from django.core.paginator import Paginator
 from django.http import HttpResponse, HttpRequest,  HttpResponseNotAllowed, HttpResponseRedirect
 from django.shortcuts import render
 from gis_csdt.filter_tools import filter_request, neighboring_points
 from gis_csdt.models import Dataset, MapElement, MapPoint, Tag, MapPolygon, TagIndiv, DataField, DataElement, Sensor, DataPoint
 from gis_csdt.serializers import TagCountSerializer, DatasetSerializer, MapPointSerializer, NewTagSerializer, MapPolygonSerializer, CountPointsSerializer, AnalyzeAreaSerializer, AnalyzeAreaNoValuesSerializer, DataPointSerializer, SensorSerializer
+
 #import csv
 from gis_csdt.serializers import TestSerializer
+from django.views.decorators.csrf import csrf_exempt
+from twilio.twiml.messaging_response import MessagingResponse
 
 ###constants for pagination
 PAGINATE_BY_CONST = 100
 PAGINATE_BY_PARAM_CONST = 'page_size'
 MAX_PAGINATE_BY_CONST = 500
+GSM_CHAR_SET = ("@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞ\x1bÆæßÉ !\"#¤%&'()*+,-./0123456789:;<=>?"
+               "¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ`¿abcdefghijklmnopqrstuvwxyzäöñüà").decode("utf8")
 ###classes for pagination
 class PaginatedModelViewSet(viewsets.ModelViewSet):
     paginate_by = PAGINATE_BY_CONST
@@ -48,6 +57,59 @@ class SubmitDataPointView(PaginatedModelViewSet):
 
     #http://www.django-rest-framework.org/api-guide/permissions
     permission_classes = [permissions.IsAuthenticated]#(permissions.IsAuthenticatedOrReadOnly)
+
+
+def GSM7ToInt(string):
+    pow = 0
+    BASE = 128  # GSM-7 code base
+    val = 0
+    for char in string:
+        val += GSM_CHAR_SET.find(char) * (BASE ** pow)
+        pow += 1
+    return val
+
+def IntToGSM7(value):
+    string = ''
+    BASE = 128  # GSM-7 code base
+    while value >= BASE:
+        string += GSM_CHAR_SET[value%BASE]
+        value = int(value/BASE)
+    string += GSM_CHAR_SET[value%BASE]
+    return string
+
+def DataToGSM7(values):
+    string = ''
+    BASE = 128  # GSM-7 code base
+    MAXSIZE = BASE**2  # 2 bytes of GSM7
+    string += IntToGSM7(values.pop(0))
+    string += IntToGSM7(values.pop(0))
+    for value in values:
+        if value > MAXSIZE:
+            raise
+        if value < BASE:
+            string+=IntToGSM7(value)+'@'
+        else:
+            string+=IntToGSM7(value)
+    return string
+
+@csrf_exempt
+def SMSSubmitDataPointView(request):
+    DATASIZE = 2  # 2 GSM-7 chars
+    try:
+        data = request.POST.get('Body')
+        phNum = int(request.POST.get('From'))
+        user = PhoneNumber.objects.get(phone_number=phNum).user
+        data = [data[i:i+DATASIZE] for i in range (0, len(data), DATASIZE)]
+        source = data.pop(0)
+        sensor = Sensor.objects.get(pk=GSM7ToInt(source[0]))
+        mapPoint = MapPoint.objects.get(pk=GSM7ToInt(source[1]))
+        for dataValue in data:
+            newData = DataPoint.objects.create(value=GSM7ToInt(dataValue), point=mapPoint, sensor=sensor, user=user)
+            newData.save()
+    except:
+        raise ParseError('Bad format.')
+    return HttpResponse(status=204)
+
 
 class TestView(PaginatedReadOnlyModelViewSet):
     serializer_class = TestSerializer

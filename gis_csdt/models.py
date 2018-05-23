@@ -97,11 +97,11 @@ class Dataset(models.Model):
 		fields['remote_id'] = [x.split('+') for x in self.remote_id_field.split(',')]
 		fields['name'] = [x.split('+') for x in self.name_field.split(',')]
 		fields['lat'] = [x.split('+') for x in self.lat_field.split(',')]
-		fields['lon'] = [x.split('+') for x in self.lon_field.split(',')] 
-		fields['street'] = [x.split('+') for x in self.street_field.split(',')] 
+		fields['lon'] = [x.split('+') for x in self.lon_field.split(',')]
+		fields['street'] = [x.split('+') for x in self.street_field.split(',')]
 		fields['city'] = [x.split('+') for x in self.city_field.split(',')]
-		fields['state'] = [x.split('+') for x in self.state_field.split(',')] 
-		fields['zipcode'] = [x.split('+') for x in self.zipcode_field.split(',')] 
+		fields['state'] = [x.split('+') for x in self.state_field.split(',')]
+		fields['zipcode'] = [x.split('+') for x in self.zipcode_field.split(',')]
 		fields['county'] = [x.split('+') for x in self.county_field.split(',')]
 		fields['field1'] = [x.split('+') for x in self.field1_name.split(',')]
 		fields['field2'] = [x.split('+') for x in self.field2_name.split(',')]
@@ -200,7 +200,7 @@ class MapElement(models.Model):
 	remote_id = models.CharField(max_length=50, blank=True, null=True)
 	name = models.CharField(max_length=150)
 	point = models.PointField(srid=4326,blank=True,null=True)
-	
+
 	objects = models.GeoManager()
 
 
@@ -298,7 +298,7 @@ class Sensor(models.Model):
         accuracy = models.CharField(max_length=100, default='accuracy')
 
         def __unicode__(self):
-                return 'id: ' + str(self.name) 
+                return 'id: ' + str(self.name)
 
 class DataElement(models.Model):
 	datafield = models.ForeignKey(DataField, related_name = 'dataElements')
@@ -317,7 +317,7 @@ class Tag(models.Model):
 	tag = models.CharField(max_length = 100)
 	approved = models.BooleanField(default=False)
 	count = models.IntegerField(default=0)
-	
+
 	def __unicode__(self):
 		return self.tag
 
@@ -337,7 +337,7 @@ class TagIndiv(models.Model):
 
 	def __unicode__(self):
 		return self.mapelement.name + ' tagged as "' + self.tag.tag + '"'
- 		
+
  	class Meta:
  		unique_together = (("tag", "mapelement"),)
 
@@ -362,3 +362,7 @@ class DataPoint(models.Model):
         def __unicode__(self):
                 return "value: " + str(self.value) + " point: " + str(self.point) + " sensor: " + str(self.sensor)
 
+
+class PhoneNumber(models.Model):
+        phone_number = models.BigIntegerField(null=False)
+        user = models.ForeignKey(get_user_model(), null=False)

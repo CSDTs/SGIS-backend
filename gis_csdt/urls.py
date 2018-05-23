@@ -22,6 +22,7 @@ urlpatterns = [
     url(r'^', include(router.urls)),
     url(r'^admin/', include(admin.site.urls)),
     url(r'^api-auth/', include('rest_framework.urls', namespace='rest_framework')),
+    url(r'api-SMS', views.SMSSubmitDataPointView, name='SMS-data'),
     #url(r'^api-count/', views.CountPointsInPolygonView.as_view(), name='count'),
     #url(r'^api-dist/', views.AnalyzeAreaAroundPointView, name='distance'),
     url(r'^around-point/(?P<mappoint_id>[0-9]+)/$', templates.AroundPointView),
