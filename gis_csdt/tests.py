@@ -74,13 +74,12 @@ class SMSCreateData(LiveServerTestCase):
         set.save()
         point = MapPoint.objects.create(lat=0,lon=0)
         point.save()
-        print "here1", MapPoint.objects.all().count()
         sensor = Sensor.objects.create(name='test')
         sensor.save()
         phNum = PhoneNumber.objects.create(phone_number=11111111111,user=self.user)
         phNum.save()
-        data = [1,2,0,128,129,300,10001]
-        data[1] = point.id
+        data = [1,1,0,128,129,300,10001]
+        data[1] = point.id # get the correct point id
         string = DataToGSM7(data)
         postData = {'Body': string.encode('utf-8'), 'From': phNum.phone_number}
         response = self.client.post('/api-SMS/', urllib.urlencode(postData), content_type='application/x-www-form-urlencoded')
@@ -109,5 +108,4 @@ class TestAddMapPointAPI(TestCase):
         self.mp_data = {'lat': 31.7, 'lon': 68.9}
         self.response = self.client.post('/api-addmp/', self.mp_data, format="json")
         self.assertEqual(self.response.status_code, 204)
-        print "here2", MapPoint.objects.all().count()
         self.assertEqual(MapPoint.objects.all().count(), original_count + 1)
