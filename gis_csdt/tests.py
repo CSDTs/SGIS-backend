@@ -109,3 +109,20 @@ class TestAddMapPointAPI(TestCase):
         self.response = self.client.post('/api-addmp/', self.mp_data, format="json")
         self.assertEqual(self.response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(MapPoint.objects.all().count(), original_count + 1)
+
+class TestAddDatasetAPI(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create_superuser(username='test',
+                                                  email='test@test.test',
+                                                  password='test')
+        self.assertTrue(self.client.login(username='test', password='test'))        
+
+    def test_api_can_add_dataset(self):
+        original_count = Dataset.objects.all().count()
+        location = Location.objects.create(state_field='NY')
+        location.save()
+        self.ds_data = {'name': 'Catskill', 'location_id': location.id}
+        self.response = self.client.post('/api-addds/', self.ds_data, format="json")
+        self.assertEqual(self.response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Dataset.objects.all().count(), original_count + 1)
