@@ -143,6 +143,19 @@ class DatasetViewSet(PaginatedReadOnlyModelViewSet):
     queryset = Dataset.objects.all()
     serializer_class = DatasetSerializer
 
+class AddDatasetView(generics.ListCreateAPIView):
+    queryset = Dataset.objects.all()
+    serializer_class = DatasetSerializer
+
+    def perform_create(self, serializer):
+        serializer.save()
+
+    def create(self, request, *args, **kwargs):
+        data = request.data
+        ds = Dataset.objects.create(**data)
+        ds.save()
+        return HttpResponse(status=status.HTTP_201_CREATED)
+
 class MapPointViewSet(PaginatedReadOnlyModelViewSet):
     serializer_class = MapPointSerializer
     model = MapPoint
