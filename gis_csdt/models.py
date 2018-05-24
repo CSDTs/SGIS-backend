@@ -223,7 +223,7 @@ class MapElement(models.Model):
 	#	abstract = True
 
 
-#class SensorReading(MapElement):
+#class SensorReading(MapElement)
 	#time = DateTimeField()
 	#node = name?
 

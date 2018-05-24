@@ -96,19 +96,18 @@ def DataToGSM7(values):
 @csrf_exempt
 def SMSSubmitDataPointView(request):
     DATASIZE = 2  # 2 GSM-7 chars
-    try:
-        data = request.POST.get('Body')
-        phNum = int(request.POST.get('From'))
-        user = PhoneNumber.objects.get(phone_number=phNum).user
-        data = [data[i:i+DATASIZE] for i in range (0, len(data), DATASIZE)]
-        source = data.pop(0)
-        sensor = Sensor.objects.get(pk=GSM7ToInt(source[0]))
-        mapPoint = MapPoint.objects.get(pk=GSM7ToInt(source[1]))
-        for dataValue in data:
-            newData = DataPoint.objects.create(value=GSM7ToInt(dataValue), point=mapPoint, sensor=sensor, user=user)
-            newData.save()
-    except:
-        raise ParseError('Bad format.')
+
+    data = request.POST.get('Body')
+    phNum = int(request.POST.get('From'))
+    user = PhoneNumber.objects.get(phone_number=phNum).user
+    data = [data[i:i+DATASIZE] for i in range (0, len(data), DATASIZE)]
+    source = data.pop(0)
+    sensor = Sensor.objects.get(pk=GSM7ToInt(source[0]))
+    mapPoint = MapPoint.objects.get(pk=GSM7ToInt(source[1]))
+    for dataValue in data:
+        newData = DataPoint.objects.create(value=GSM7ToInt(dataValue), point=mapPoint, sensor=sensor, user=user)
+        newData.save()
+
     return HttpResponse(status=204)   
 
 class TestView(PaginatedReadOnlyModelViewSet):
@@ -159,12 +158,9 @@ class AddMapPointView(generics.ListCreateAPIView):
         serializer.save()
 
     def create(self, request, *args, **kwargs):
-        try:
-            data = request.data
-            mp = MapPoint.objects.create(**data)
-            mp.save()
-        except:
-            raise ParseError('Bad format.')
+        data = request.data
+        mp = MapPoint.objects.create(**data)
+        mp.save()
         return HttpResponse(status=204)
 
 class MapPolygonViewSet(PaginatedReadOnlyModelViewSet):
