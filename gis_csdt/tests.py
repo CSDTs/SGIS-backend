@@ -126,3 +126,5 @@ class TestAddDatasetAPI(TestCase):
         self.response = self.client.post('/api-addds/', self.ds_data, format="json")
         self.assertEqual(self.response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Dataset.objects.all().count(), original_count + 1)
+        self.assertEqual(Dataset.objects.get(pk=1).name, 'Catskill')
+        self.assertEqual(Dataset.objects.get(pk=1).location.state_field, 'NY')
