@@ -1,7 +1,7 @@
 # -*- coding: utf8 -*-
 import sys
 import binascii
-from rest_framework import views, viewsets, permissions, response, pagination, generics
+from rest_framework import views, viewsets, permissions, response, pagination, generics, status
 from rest_framework.settings import api_settings
 from rest_framework_csv.renderers import CSVRenderer
 from rest_framework.exceptions import ParseError #, APIException
@@ -161,7 +161,7 @@ class AddMapPointView(generics.ListCreateAPIView):
         data = request.data
         mp = MapPoint.objects.create(**data)
         mp.save()
-        return HttpResponse(status=204)
+        return HttpResponse(status=status.HTTP_201_CREATED)
 
 class MapPolygonViewSet(PaginatedReadOnlyModelViewSet):
     serializer_class = MapPolygonSerializer

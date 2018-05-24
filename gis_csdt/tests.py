@@ -107,5 +107,5 @@ class TestAddMapPointAPI(TestCase):
         original_count = MapPoint.objects.all().count()
         self.mp_data = {'lat': 31.7, 'lon': 68.9}
         self.response = self.client.post('/api-addmp/', self.mp_data, format="json")
-        self.assertEqual(self.response.status_code, 204)
+        self.assertEqual(self.response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(MapPoint.objects.all().count(), original_count + 1)
