@@ -1,7 +1,7 @@
 # -*- coding: utf8 -*-
 import sys
 import binascii
-from rest_framework import views, viewsets, permissions, response, pagination
+from rest_framework import views, viewsets, permissions, response, pagination, generics
 from rest_framework.settings import api_settings
 from rest_framework_csv.renderers import CSVRenderer
 from rest_framework.exceptions import ParseError #, APIException
@@ -13,9 +13,10 @@ from django.core.paginator import Paginator
 from django.http import HttpResponse, HttpRequest,  HttpResponseNotAllowed, HttpResponseRedirect
 from django.shortcuts import render
 from gis_csdt.filter_tools import filter_request, neighboring_points
-from gis_csdt.models import Dataset, MapElement, MapPoint, Tag, MapPolygon, TagIndiv, DataField, DataElement, Sensor, DataPoint
+from gis_csdt.models import Dataset, MapElement, MapPoint, Tag, MapPolygon, TagIndiv, DataField, DataElement, Sensor, DataPoint, PhoneNumber
 from gis_csdt.serializers import TagCountSerializer, DatasetSerializer, MapPointSerializer, NewTagSerializer, MapPolygonSerializer, CountPointsSerializer, AnalyzeAreaSerializer, AnalyzeAreaNoValuesSerializer, DataPointSerializer, SensorSerializer
-
+from decimal import Decimal
+import json
 #import csv
 from gis_csdt.serializers import TestSerializer
 from django.views.decorators.csrf import csrf_exempt
@@ -108,8 +109,7 @@ def SMSSubmitDataPointView(request):
             newData.save()
     except:
         raise ParseError('Bad format.')
-    return HttpResponse(status=204)
-
+    return HttpResponse(status=204)   
 
 class TestView(PaginatedReadOnlyModelViewSet):
     serializer_class = TestSerializer
@@ -150,6 +150,22 @@ class MapPointViewSet(PaginatedReadOnlyModelViewSet):
 
     def get_queryset(self):
         return filter_request(self.request.query_params, 'mappoint')
+
+class AddMapPointView(generics.ListCreateAPIView):
+    queryset = MapPoint.objects.all()
+    serializer_class = MapPointSerializer
+
+    def perform_create(self, serializer):
+        serializer.save()
+
+    def create(self, request, *args, **kwargs):
+        try:
+            data = request.data
+            mp = MapPoint.objects.create(**data)
+            mp.save()
+        except:
+            raise ParseError('Bad format.')
+        return HttpResponse(status=204)
 
 class MapPolygonViewSet(PaginatedReadOnlyModelViewSet):
     serializer_class = MapPolygonSerializer
