@@ -13,6 +13,7 @@ from gis_csdt.views import DataToGSM7
 from django.contrib.auth import get_user_model
 from django.test import LiveServerTestCase
 import urllib
+from decimal import Decimal
 User = get_user_model()
 
 class AllViewTestsNoData(APITestCase):
@@ -39,7 +40,6 @@ class AllViewTestsNoData(APITestCase):
         self.assertEqual(response.status_code, 400)
 
 class TestDataset(TestCase):
-
     fixtures = ['test_data.json']
 
     def test_can_create_new_dataset(self):
@@ -69,18 +69,45 @@ class SMSCreateData(LiveServerTestCase):
                                                   password='test')
         self.assertTrue(self.client.login(username='test', password='test'))
 
-    def test_SMS(self):
-        data = [1,1,0,128,129,300,10001]
-        string = DataToGSM7(data)
+    def test_SMS(self):       
         set = Dataset.objects.create(name='test')
         set.save()
         point = MapPoint.objects.create(lat=0,lon=0)
         point.save()
+        print "here1", MapPoint.objects.all().count()
         sensor = Sensor.objects.create(name='test')
         sensor.save()
         phNum = PhoneNumber.objects.create(phone_number=11111111111,user=self.user)
         phNum.save()
+        data = [1,2,0,128,129,300,10001]
+        data[1] = point.id
+        string = DataToGSM7(data)
         postData = {'Body': string.encode('utf-8'), 'From': phNum.phone_number}
         response = self.client.post('/api-SMS/', urllib.urlencode(postData), content_type='application/x-www-form-urlencoded')
         self.assertEqual(DataPoint.objects.get(pk=5).value, 10001)
 
+class TestMapPoint(TestCase):
+    def test_can_create_new_mappoint(self):
+        original_count = MapPoint.objects.all().count()       
+        point = MapPoint(lat=43.0831, lon=73.7846)
+        point.save()
+        sleep(1)
+        self.assertEqual(MapPoint.objects.all().count(), original_count + 1)
+        self.assertEqual(point.lat, Decimal(43.0831))
+
+
+class TestAddMapPointAPI(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create_superuser(username='test',
+                                                  email='test@test.test',
+                                                  password='test')
+        self.assertTrue(self.client.login(username='test', password='test'))        
+
+    def test_api_can_add_mappoint(self):
+        original_count = MapPoint.objects.all().count()
+        self.mp_data = {'lat': 31.7, 'lon': 68.9}
+        self.response = self.client.post('/api-addmp/', self.mp_data, format="json")
+        self.assertEqual(self.response.status_code, 204)
+        print "here2", MapPoint.objects.all().count()
+        self.assertEqual(MapPoint.objects.all().count(), original_count + 1)
