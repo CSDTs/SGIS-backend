@@ -356,11 +356,14 @@ class DataPoint(models.Model):
         point = models.ForeignKey(MapPoint, related_name='points')
         sensor = models.ForeignKey(Sensor, related_name='sensors')
         user = models.ForeignKey(get_user_model(), default=None)
+        time = models.DateTimeField(blank=True, null=True)
         # To add later to tie into django_team
         #team = models.ForeignKey(Team)
 
         def __unicode__(self):
-                return "value: " + str(self.value) + " point: " + str(self.point) + " sensor: " + str(self.sensor)
+                return "value: " + str(self.value) + " point: " + str(self.point) \
+                	   + " sensor: " + str(self.sensor) + " time: " + str(self.time)
+
 
 
 class PhoneNumber(models.Model):
