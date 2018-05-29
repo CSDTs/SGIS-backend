@@ -105,9 +105,9 @@ def SMSSubmitDataPointView(request):
     sensor = Sensor.objects.get(pk=GSM7ToInt(source[0]))
     mapPoint = MapPoint.objects.get(pk=GSM7ToInt(source[1]))
     for dataValue in data:
-        newData = DataPoint.objects.create(value=GSM7ToInt(dataValue), point=mapPoint, sensor=sensor, user=user)
+        newData = DataPoint.objects.create(value=GSM7ToInt(dataValue), point=mapPoint, user=user)
         newData.save()
-
+        sensor.datapoints.add(newData)
     return HttpResponse(status=204)   
 
 class TestView(PaginatedReadOnlyModelViewSet):

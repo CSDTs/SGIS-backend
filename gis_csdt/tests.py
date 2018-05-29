@@ -14,6 +14,8 @@ from django.contrib.auth import get_user_model
 from django.test import LiveServerTestCase
 import urllib
 from decimal import Decimal
+from pympler import asizeof
+from datetime import datetime
 User = get_user_model()
 
 class AllViewTestsNoData(APITestCase):
@@ -80,10 +82,12 @@ class SMSCreateData(LiveServerTestCase):
         phNum.save()
         data = [1,1,0,128,129,300,10001]
         data[1] = point.id # get the correct point id
+        data[0] = sensor.id
         string = DataToGSM7(data)
         postData = {'Body': string.encode('utf-8'), 'From': phNum.phone_number}
         response = self.client.post('/api-SMS/', urllib.urlencode(postData), content_type='application/x-www-form-urlencoded')
-        self.assertEqual(DataPoint.objects.get(pk=5).value, 10001)
+        self.assertEqual(DataPoint.objects.get(pk=6).value, 10001)
+
 
 class TestMapPoint(TestCase):
     def test_can_create_new_mappoint(self):
@@ -128,3 +132,20 @@ class TestAddDatasetAPI(TestCase):
         self.assertEqual(Dataset.objects.all().count(), original_count + 1)
         self.assertEqual(Dataset.objects.get(pk=1).name, 'Catskill')
         self.assertEqual(Dataset.objects.get(pk=1).location.state_field, 'NY')
+
+class TestDataPoint(TestCase):
+
+    def test_size_of_datapoint(self):
+        user = User.objects.create_superuser(username='test',
+                                             email='test@test.test',
+                                             password='test')
+        
+        point = MapPoint(lat=43.0831, lon=73.7846)
+        point.save()
+        dp = DataPoint(value=25, point=point, user=user)
+        dp.save()
+        sensor = Sensor.objects.create(name='test')
+        sensor.save()
+        sensor.datapoints.add(dp)   
+        print "size of DataPoint:", asizeof.asizeof(dp)
+        print "size of Sensor:", asizeof.asizeof(sensor)

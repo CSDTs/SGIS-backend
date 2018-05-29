@@ -290,16 +290,6 @@ class DataField(models.Model):
 	def __unicode__(self):
 		return self.field_en + ', id:' + str(self.id) + ', dataset:' + str(self.dataset_id)
 
-class Sensor(models.Model):
-        name = models.CharField(max_length=100, default='name', unique=True)
-        supplier = models.CharField(max_length=100, default='supplier')
-        model_number = models.CharField(max_length=100, default='model_number')
-        metric = models.CharField(max_length=100, default='metric')
-        accuracy = models.CharField(max_length=100, default='accuracy')
-
-        def __unicode__(self):
-                return 'id: ' + str(self.name)
-
 class DataElement(models.Model):
 	datafield = models.ForeignKey(DataField, related_name = 'dataElements')
 	mapelement = models.ForeignKey(MapElement)
@@ -354,7 +344,7 @@ class TagIndiv(models.Model):
 class DataPoint(models.Model):
         value = models.DecimalField(max_digits=30, decimal_places=15)
         point = models.ForeignKey(MapPoint, related_name='points')
-        sensor = models.ForeignKey(Sensor, related_name='sensors')
+        #sensor = models.ForeignKey(Sensor, related_name='sensors')
         user = models.ForeignKey(get_user_model(), default=None)
         time = models.DateTimeField(blank=True, null=True)
         # To add later to tie into django_team
@@ -364,7 +354,16 @@ class DataPoint(models.Model):
                 return "value: " + str(self.value) + " point: " + str(self.point) \
                 	   + " sensor: " + str(self.sensor) + " time: " + str(self.time)
 
+class Sensor(models.Model):
+        name = models.CharField(max_length=100, default='name', unique=True)
+        supplier = models.CharField(max_length=100, default='supplier')
+        model_number = models.CharField(max_length=100, default='model_number')
+        metric = models.CharField(max_length=100, default='metric')
+        accuracy = models.CharField(max_length=100, default='accuracy')
+        datapoints = models.ManyToManyField(DataPoint)
 
+        def __unicode__(self):
+                return 'id: ' + str(self.name)
 
 class PhoneNumber(models.Model):
         phone_number = models.BigIntegerField(null=False)
