@@ -342,10 +342,7 @@ class TagIndiv(models.Model):
         	matches[0].save()'''
 
 class DataPoint(models.Model):
-        value = models.DecimalField(max_digits=30, decimal_places=15)
-        point = models.ForeignKey(MapPoint, related_name='points')
-        #sensor = models.ForeignKey(Sensor, related_name='sensors')
-        user = models.ForeignKey(get_user_model(), default=None)
+        value = models.DecimalField(max_digits=30, decimal_places=15)      
         time = models.DateTimeField(blank=True, null=True)
         # To add later to tie into django_team
         #team = models.ForeignKey(Team)
@@ -361,6 +358,8 @@ class Sensor(models.Model):
         metric = models.CharField(max_length=100, default='metric')
         accuracy = models.CharField(max_length=100, default='accuracy')
         datapoints = models.ManyToManyField(DataPoint)
+        user = models.ForeignKey(get_user_model(), null=True)
+        mappoint = models.ForeignKey(MapPoint, related_name='points', null=True)
 
         def __unicode__(self):
                 return 'id: ' + str(self.name)

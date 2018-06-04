@@ -99,13 +99,12 @@ def SMSSubmitDataPointView(request):
 
     data = request.POST.get('Body')
     phNum = int(request.POST.get('From'))
-    user = PhoneNumber.objects.get(phone_number=phNum).user
+    #user = PhoneNumber.objects.get(phone_number=phNum).user
     data = [data[i:i+DATASIZE] for i in range (0, len(data), DATASIZE)]
     source = data.pop(0)
     sensor = Sensor.objects.get(pk=GSM7ToInt(source[0]))
-    mapPoint = MapPoint.objects.get(pk=GSM7ToInt(source[1]))
     for dataValue in data:
-        newData = DataPoint.objects.create(value=GSM7ToInt(dataValue), point=mapPoint, user=user)
+        newData = DataPoint.objects.create(value=GSM7ToInt(dataValue))
         newData.save()
         sensor.datapoints.add(newData)
     return HttpResponse(status=204)   

@@ -74,14 +74,14 @@ class SMSCreateData(LiveServerTestCase):
     def test_SMS(self):       
         set = Dataset.objects.create(name='test')
         set.save()
-        point = MapPoint.objects.create(lat=0,lon=0)
-        point.save()
-        sensor = Sensor.objects.create(name='test')
+        mappoint = MapPoint.objects.create(lat=0,lon=0)
+        mappoint.save()
+        sensor = Sensor.objects.create(name='test', mappoint=mappoint, user=self.user)
         sensor.save()
         phNum = PhoneNumber.objects.create(phone_number=11111111111,user=self.user)
         phNum.save()
         data = [1,1,0,128,129,300,10001]
-        data[1] = point.id # get the correct point id
+        data[1] = mappoint.id # get the correct point id
         data[0] = sensor.id
         string = DataToGSM7(data)
         postData = {'Body': string.encode('utf-8'), 'From': phNum.phone_number}
@@ -140,11 +140,11 @@ class TestDataPoint(TestCase):
                                              email='test@test.test',
                                              password='test')
         
-        point = MapPoint(lat=43.0831, lon=73.7846)
-        point.save()
-        dp = DataPoint(value=25, point=point, user=user)
+        mappoint = MapPoint(lat=43.0831, lon=73.7846)
+        mappoint.save()
+        dp = DataPoint(value=25)
         dp.save()
-        sensor = Sensor.objects.create(name='test')
+        sensor = Sensor.objects.create(name='test', user=user, mappoint=mappoint)
         sensor.save()
         sensor.datapoints.add(dp)   
         print "size of DataPoint:", asizeof.asizeof(dp)
