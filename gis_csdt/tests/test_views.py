@@ -1,7 +1,6 @@
 from rest_framework import status
 from rest_framework.test import APITestCase, APIClient
 from django.core.urlresolvers import reverse
-
 from time import sleep
 from django.test import TestCase
 from django.contrib.auth.models import User
@@ -76,3 +75,23 @@ class TestAddDatasetAPI(TestCase):
         self.assertEqual(Dataset.objects.all().count(), original_count + 1)
         self.assertEqual(Dataset.objects.get(pk=5).name, 'Catskill')
         self.assertEqual(Dataset.objects.get(pk=5).location.state_field, 'NY')
+
+class TestAroundPointView(TestCase):
+
+    def test_can_load_page(self):
+        response = self.client.get('/around-point/')
+        self.assertEqual(response.status_code, 200)
+
+    def test_contains_mappoint(self):
+        mp1 = MapPoint(lat=43.0831, lon=73.7846)
+        mp1.save()
+        mp2 = MapPoint(lat=20.1515, lon=25.2523)
+        mp2.save()
+        mp3 = MapPoint(lat=23.4213, lon=123.4521)
+        mp3.save()
+        response = self.client.get('/around-point/%d/' %mp1.id)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, str(mp1))
+        response = self.client.get('/around-point/%d/' %mp3.id)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, str(mp3))
