@@ -73,8 +73,7 @@ class TestAddDatasetAPI(TestCase):
         self.response = self.client.post('/api-addds/', self.ds_data, format="json")
         self.assertEqual(self.response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(Dataset.objects.all().count(), original_count + 1)
-        self.assertEqual(Dataset.objects.get(pk=5).name, 'Catskill')
-        self.assertEqual(Dataset.objects.get(pk=5).location.state_field, 'NY')
+        self.assertEqual(Dataset.objects.get(name='Catskill').location.state_field, 'NY')
 
 class TestAroundPointView(TestCase):
 
@@ -87,11 +86,9 @@ class TestAroundPointView(TestCase):
         mp1.save()
         mp2 = MapPoint(lat=20.1515, lon=25.2523)
         mp2.save()
-        mp3 = MapPoint(lat=23.4213, lon=123.4521)
-        mp3.save()
         response = self.client.get('/around-point/%d/' %mp1.id)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, str(mp1))
-        response = self.client.get('/around-point/%d/' %mp3.id)
+        response = self.client.get('/around-point/%d/' %mp2.id)
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, str(mp3))
+        self.assertContains(response, str(mp1))
