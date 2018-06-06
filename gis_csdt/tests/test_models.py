@@ -15,6 +15,7 @@ from django.test import LiveServerTestCase
 import urllib
 from decimal import Decimal
 from datetime import datetime
+import pytz
 User = get_user_model()
 
 class AllViewTestsNoData(APITestCase):
@@ -47,7 +48,8 @@ class TestDataset(TestCase):
         original_count = Dataset.objects.all().count()       
         geo1 = GeoCoordinates(lat_field="43.0831", lon_field="73.7846")
         geo1.save()
-        dataset1 = Dataset(name="Saratoga Spring", cached="2017-10-12T12:46:00.258Z", coordinates=geo1)
+        cached = datetime(year=2017, month=10, day=12, hour=12, minute=46, tzinfo=pytz.UTC)
+        dataset1 = Dataset(name="Saratoga Spring", cached=cached, coordinates=geo1)
         dataset1.save()
         sleep(1)
         self.assertEqual(Dataset.objects.all().count(), original_count + 1)
@@ -62,6 +64,7 @@ class TestDataset(TestCase):
         self.assertEqual(dataset2.location.city_field, "Troy")
         self.assertEqual(dataset2.coordinates, None)
         self.assertEqual(str(dataset2), "RPI")
+        self.assertEqual(dataset1.should_update(), True)
 
     def test_reach_field(self):
         ds = Dataset.objects.get(pk=1)
@@ -74,11 +77,13 @@ class TestDataset(TestCase):
 class TestMapPoint(TestCase):
     def test_can_create_new_mappoint(self):
         original_count = MapPoint.objects.all().count()       
-        point = MapPoint(lat=43.0831, lon=73.7846)
+        point = MapPoint(lat=42.7302, lon=73.6788, city='Troy', state='NY')
         point.save()
         sleep(1)
         self.assertEqual(MapPoint.objects.all().count(), original_count + 1)
-        self.assertEqual(point.lat, Decimal(43.0831))
+        self.assertEqual(point.lat, Decimal(42.7302))
+        status = point.geocode()['status']
+        self.assertTrue(status == 'OK' or status == 'OVER_QUERY_LIMIT' or status == 'ZERO_RESULTS')
 
 class TestDataPoint(TestCase):
 
