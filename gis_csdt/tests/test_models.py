@@ -61,6 +61,15 @@ class TestDataset(TestCase):
         self.assertEqual(Dataset.objects.all().count(), original_count + 1)
         self.assertEqual(dataset2.location.city_field, "Troy")
         self.assertEqual(dataset2.coordinates, None)
+        self.assertEqual(str(dataset2), "RPI")
+
+    def test_reach_field(self):
+        ds = Dataset.objects.get(pk=1)
+        result = ds.reach_field({'field2':'test2', 'field3':'test3'}, [['field1', 'field2', 'field3']])
+        self.assertEqual(result, 'test2 test3')
+
+        result = ds.reach_field({'field2':{'field4': 'test4'}}, [['field1', 'field2', 'field3'], ['field4', 'field5']])
+        self.assertEqual(result, 'test4')
 
 class TestMapPoint(TestCase):
     def test_can_create_new_mappoint(self):
