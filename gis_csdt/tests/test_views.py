@@ -92,3 +92,26 @@ class TestAroundPointView(TestCase):
         response = self.client.get('/around-point/%d/' %mp2.id)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, str(mp2))
+
+class TestAroundPointNoValueView(TestCase):
+
+    def test_can_load_page(self):
+        self.user = User.objects.create_superuser(username='test',
+                                                  email='test@test.test',
+                                                  password='test')
+        self.assertTrue(self.client.login(username='test', password='test'))
+        mp1 = MapPoint(lat=43.0831, lon=73.7846)
+        mp1.save()
+        response = self.client.get('/api-dist2/', {'min_lat': 12.12, 'max_lat': 108.00, 'dataset': '1,2', 'unit': 'km'})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, str(mp1))
+
+class TestCountPointsInPolygonView(TestCase):
+
+    def test_can_load_page(self):
+        mp1 = MapPoint(lat=43.0831, lon=73.7846)
+        mp1.save()
+        response = self.client.get('/api-count/', {'min_lat': 12.12, 'max_lat': 108.00, 'dataset': '1,2', 
+                                                   'unit': 'km', 'state': 'NY'})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, str(mp1))
