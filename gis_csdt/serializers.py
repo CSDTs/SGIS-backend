@@ -145,15 +145,15 @@ class TestSerializer(gis_serializers.GeoFeatureModelSerializer):
         child = mapelement.mappoint if hasattr(mapelement,'mappoint') else mapelement.mappolygon
         dataset = Dataset.objects.get(id=mapelement.dataset_id)
         dataelements = DataElement.objects.filter(mapelement_id=mapelement.id)
+        if dataset.names is not None:
+            if dataset.names.field1_name != '' and (child.field1 != '' or child.field1 is not None):
+                data[dataset.names.field1_en] = child.field1
+            if dataset.names.field2_name != '' and (child.field2 != '' or child.field2 is not None):
+                data[dataset.names.field2_en] = child.field2
+            if hasattr(mapelement,'mappoint') and dataset.field3_name != '' and (child.field3 != '' or child.field3 is not None):
+                data[dataset.field3_en] = child.field3
 
-        if dataset.field1_name != '' and (child.field1 != '' or child.field1 is not None):
-            data[dataset.field1_en] = child.field1
-        if dataset.field2_name != '' and (child.field2 != '' or child.field2 is not None):
-            data[dataset.field2_en] = child.field2
-        if hasattr(mapelement,'mappoint') and dataset.field3_name != '' and (child.field3 != '' or child.field3 is not None):
-            data[dataset.field3_en] = child.field3
-
-        params = self.context.get('request', None).QUERY_PARAMS
+        params = self.context.get('request', None).query_params
         if 'data' in params and params['data'] == 'all':
             for de in dataelements:
                 for ft, field_name in {DataField.INTEGER: 'int_data', DataField.FLOAT: 'float_data', DataField.STRING: 'char_data'}.iteritems():
@@ -207,7 +207,7 @@ class CountPointsSerializer(serializers.ModelSerializer):
 
     def get_count(self, mappolygon):
         request = self.context.get('request', None)
-        params = copy.deepcopy(request.QUERY_PARAMS)
+        params = copy.deepcopy(request.query_params)
         for key in ['max_lat','min_lat','max_lon','min_lon','state']:
             try:
                 del params[key]
