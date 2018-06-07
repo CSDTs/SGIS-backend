@@ -32,5 +32,22 @@
   	},
   	"model": "gis_csdt.dataset",
   	"pk": 2
+},
+{
+  "fields": {
+    "lat": 42.7302,
+    "lon": 73.6788,
+    "city": "Troy",
+    "state": "NY"
+  },
+  "model": "gis_csdt.mappoint",
+  "pk": 1
+},
+{
+  "fields": {
+    "name": "RPI"
+  },
+  "model": "gis_csdt.mapelement",
+  "pk": 1
 }
 ]
