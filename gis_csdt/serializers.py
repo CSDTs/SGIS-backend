@@ -214,7 +214,7 @@ class CountPointsSerializer(serializers.ModelSerializer):
             except:
                 pass #no big deal
 
-        c = {mappolygon.dataset.field1_en : mappolygon.mappolygon.field1, mappolygon.dataset.field2_en : mappolygon.mappolygon.field2}
+        c = {mappolygon.dataset.names.field1_en : mappolygon.mappolygon.field1, mappolygon.dataset.names.field2_en : mappolygon.mappolygon.field2}
 
         datafields = DataField.objects.filter(dataset=mappolygon.dataset)
         #get other data
