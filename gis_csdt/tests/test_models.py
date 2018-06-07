@@ -8,8 +8,10 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.contenttypes.models import ContentType
 
-from gis_csdt.models import Location, GeoCoordinates, DatasetNameField, Dataset, MapPoint, Sensor, DataPoint, PhoneNumber
+from gis_csdt.models import Location, GeoCoordinates, DatasetNameField, Dataset, MapPoint, MapElement, Sensor, DataPoint, PhoneNumber
 from gis_csdt.views import DataToGSM7
+from gis_csdt.serializers import TagCountSerializer, DatasetSerializer, MapPointSerializer, NewTagSerializer, MapPolygonSerializer, CountPointsSerializer, AnalyzeAreaSerializer, AnalyzeAreaNoValuesSerializer, DataPointSerializer, SensorSerializer
+
 from django.contrib.auth import get_user_model
 from django.test import LiveServerTestCase
 import urllib
