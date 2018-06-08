@@ -372,7 +372,7 @@ class AnalyzeAreaSerializer(serializers.ModelSerializer):
 
         return data_sums
 
-    def area_around_point2(self, mappoint):
+    def get_areaAroundPoint2(self, mappoint):
         request = self.context.get('request', None)
 
         years = request.GET.getlist('year')
@@ -492,7 +492,7 @@ class AnalyzeAreaSerializer(serializers.ModelSerializer):
                                     except:
                                         continue
 
-        return data_sum
+        return data_sums
 
 class SensorSerializer(serializers.ModelSerializer):
     name = serializers.CharField(max_length=100)
