@@ -40,7 +40,7 @@ class SMSCreateData(LiveServerTestCase):
         string = DataToGSM7(data)
         postData = {'Body': string.encode('utf-8'), 'From': phNum.phone_number}
         response = self.client.post('/api-SMS/', urllib.urlencode(postData), content_type='application/x-www-form-urlencoded')
-        self.assertEqual(DataPoint.objects.get(pk=7).value, 10001)
+        self.assertEqual(DataPoint.objects.get(pk=8).value, 10001)
 
 class TestAddMapPointAPI(TestCase):
     def setUp(self):
