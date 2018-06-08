@@ -628,5 +628,4 @@ class AnalyzeAreaNoValuesSerializer(serializers.ModelSerializer):
             if len(poly) > 0:
                 data_sums[dist_str]['polygons'] = poly
                 data_sums[dist_str]['land_area'] = land_area
-
-
+        return data_sums
