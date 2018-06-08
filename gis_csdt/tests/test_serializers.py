@@ -4,14 +4,15 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.contenttypes.models import ContentType
 from rest_framework.views import APIView
-from gis_csdt.models import Location, GeoCoordinates, DatasetNameField, Dataset, MapPoint, MapElement, Sensor, DataPoint, PhoneNumber, MapPolygon, DataElement, DataField
+from gis_csdt.models import Location, GeoCoordinates, DatasetNameField, Dataset, MapPoint, MapElement, Sensor, DataPoint, PhoneNumber, MapPolygon, DataElement, DataField, Tag, TagIndiv
 from gis_csdt.views import DataToGSM7
 from gis_csdt.serializers import TagCountSerializer, DatasetSerializer, MapPointSerializer, NewTagSerializer, TestSerializer, MapPolygonSerializer, CountPointsSerializer, AnalyzeAreaSerializer, AnalyzeAreaNoValuesSerializer, DataPointSerializer, SensorSerializer
 from django.contrib.gis.db import models
-from django.contrib.gis.geos import Polygon, MultiPolygon
+from django.contrib.gis.geos import Polygon, MultiPolygon, Point
 from django.contrib.auth import get_user_model
 from django.test import LiveServerTestCase
 from rest_framework.request import Request
+from django.http import HttpRequest, QueryDict
 import urllib
 
 User = get_user_model()
@@ -87,3 +88,46 @@ class TestCountPointsSerializer(TestCase):
 		serializer = CountPointsSerializer(context={'request': self.request})
 		self.assertEqual(serializer.get_count(polygon), 
 						 {'test1': 23, 'en1': 1.0, 'en2': 2.0, 'test2': 2.34, 'test3': 'abc'})
+
+class TestAnalyzeAreaSerializer(TestCase):
+	fixtures = ['test_data.json']
+
+	def setUp(self):
+		ds = Dataset(name="census2016")
+		ds.save()
+		self.mp = MapPoint.objects.get(pk=1)
+		self.mp.dataset = ds
+		self.mp.point = Point(5, 23)
+		MapPoint(lat=23.41, lon=98.0, dataset=ds, point=Point(5, 23)).save()
+		tag1 = Tag(dataset=ds, tag='tag1', approved=True, count=1)
+		tag1.save()
+		tag2 = Tag(dataset=ds, tag='tag2', approved=True, count=1)
+		tag2.save()
+		tagindiv1 = TagIndiv(tag=tag1, mapelement=self.mp)
+		tagindiv1.save()
+		tagindiv2 = TagIndiv(tag=tag2, mapelement=self.mp)
+		tagindiv2.save()
+
+		self.request = HttpRequest()
+		qdict = QueryDict('', mutable=True)
+		qdict.update({'year': '2014'})
+		qdict.update({'year': '2016'})
+		qdict.update({'unit': 'km'})
+		self.request.GET = qdict
+		self.serializer = AnalyzeAreaSerializer(context={'request': self.request})
+	
+	def test_can_get_areaAroundPoint(self):
+		data = self.serializer.get_areaAroundPoint(self.mp)
+		print data
+		self.assertEqual(data['point id(s)'], '2')
+		self.assertTrue(data.get('1.000000 km'))
+		self.assertTrue(data.get('3.000000 km'))
+		self.assertTrue(data.get('5.000000 km'))
+
+	def test_can_get_areaAroundPoint2(self):
+		data = self.serializer.get_areaAroundPoint2(self.mp)
+		print data
+		self.assertEqual(data['point id(s)'], '3')
+		self.assertTrue(data.get('1.000000 km'))
+		self.assertTrue(data.get('3.000000 km'))
+		self.assertTrue(data.get('5.000000 km'))
