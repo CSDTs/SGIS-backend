@@ -504,7 +504,9 @@ class SensorSerializer(serializers.ModelSerializer):
         model = Sensor
         fields = ('name', 'supplier', 'model_number', 'metric', 'accuracy')
     def create(self, attrs, instance=None):
-        sensorModel = Sensor(name=attrs['name'].strip(),supplier=attrs['supplier'].strip(),model_number=attrs['model_number'],metric=attrs['metric'],accuracy=attrs['accuracy'])
+        thisUser = self.context['request'].user
+        sensorModel = Sensor(name=attrs['name'].strip(), supplier=attrs['supplier'].strip(), model_number=attrs['model_number'],
+                             metric=attrs['metric'], accuracy=attrs['accuracy'], user_id=thisUser.id)
         sensorModel.save()
         return sensorModel
 
@@ -518,8 +520,7 @@ class DataPointSerializer(serializers.ModelSerializer):
         fields = ('__all__')
 
     def create(self, attrs, instance=None):
-        thisUser = self.context['request'].user
-        datapointModel = DataPoint(value=attrs['value'], sensor=attrs['sensor'], point=attrs['point'], user_id=thisUser.id)
+        datapointModel = DataPoint(value=attrs['value'])
         datapointModel.save()
         return datapointModel
 
