@@ -7,8 +7,9 @@ from django.test import TestCase
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.contenttypes.models import ContentType
+from django.contrib.gis.geos import Polygon, MultiPolygon, Point
 
-from gis_csdt.models import Location, GeoCoordinates, DatasetNameField, Dataset, MapPoint, MapElement, Sensor, DataPoint, PhoneNumber
+from gis_csdt.models import Location, GeoCoordinates, DatasetNameField, Dataset, MapPoint, MapElement, Sensor, DataPoint, PhoneNumber, MapPolygon
 from gis_csdt.views import DataToGSM7
 from gis_csdt.serializers import TagCountSerializer, DatasetSerializer, MapPointSerializer, NewTagSerializer, MapPolygonSerializer, CountPointsSerializer, AnalyzeAreaSerializer, AnalyzeAreaNoValuesSerializer, DataPointSerializer, SensorSerializer
 
@@ -105,3 +106,22 @@ class TestDataPoint(TestCase):
         sensor.datapoints.add(dp2)
         self.assertEqual(sensor.mappoint.lat, 43.0831)
         self.assertEqual(sensor.datapoints.filter(value=20).count(), 1)
+
+class TestMapElement(TestCase):
+    fixtures = ['test_data.json']
+
+    def test_can_create_mapelement(self):
+        ds = Dataset.objects.get(pk=1)
+        p1 = Polygon( ((0, 0), (0, 1), (1, 1), (0, 0)) )
+        p2 = Polygon( ((1, 1), (1, 2), (2, 2), (1, 1)) )
+        mpoly = MultiPolygon(p1, p2)
+        polygon = MapPolygon(lat='42.7302', lon='73.6788', field1=1.0, field2=2.0, mpoly=mpoly, dataset=ds)
+        polygon.save()  
+        mp = MapPoint.objects.get(pk=1)
+        original_count = MapElement.objects.all().count()
+        me = MapElement(dataset=ds, remote_id='123', name='element', mappolygon=polygon, mappoint=mp)
+        me.save()
+        self.assertEqual(MapElement.objects.all().count(), original_count + 1)
+        self.assertEqual(me.name, 'element')
+        self.assertEqual(me.polygon_id(), me.id)
+        self.assertEqual(me.point_id(), me.id)
