@@ -150,8 +150,8 @@ class TestSerializer(gis_serializers.GeoFeatureModelSerializer):
                 data[dataset.names.field1_en] = child.field1
             if dataset.names.field2_name != '' and (child.field2 != '' or child.field2 is not None):
                 data[dataset.names.field2_en] = child.field2
-            if hasattr(mapelement,'mappoint') and dataset.field3_name != '' and (child.field3 != '' or child.field3 is not None):
-                data[dataset.field3_en] = child.field3
+            if hasattr(mapelement,'mappoint') and dataset.names.field3_name != '' and (child.field3 != '' or child.field3 is not None):
+                data[dataset.names.field3_en] = child.field3
 
         params = self.context.get('request', None).query_params
         if 'data' in params and params['data'] == 'all':

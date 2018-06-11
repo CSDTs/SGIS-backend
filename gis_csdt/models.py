@@ -348,8 +348,7 @@ class DataPoint(models.Model):
         #team = models.ForeignKey(Team)
 
         def __unicode__(self):
-                return "value: " + str(self.value) + " point: " + str(self.point) \
-                	   + " sensor: " + str(self.sensor) + " time: " + str(self.time)
+                return "value: " + str(self.value) + " time: " + str(self.time)
 
 class Sensor(models.Model):
         name = models.CharField(max_length=100, default='name', unique=True)
