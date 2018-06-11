@@ -63,15 +63,20 @@ class TestCountPointsSerializer(TestCase):
 		mpoly = MultiPolygon(p1, p2)
 		polygon = MapPolygon(lat='42.7302', lon='73.6788', field1=1.0, field2=2.0, mpoly=mpoly, dataset=ds)
 		polygon.save()
-		# me = MapElement(name='RPI', dataset=ds, mappolygon=polygon)
-		# me.save()
-		# sleep(1)
+
 		df1 = DataField(dataset=ds, field_type='I', field_name='int_data', field_en='test1')
 		df1.save()
 		df2 = DataField(dataset=ds, field_type='F', field_name='float_data', field_en='test2')
 		df2.save()
 		df3 = DataField(dataset=ds, field_type='C', field_name='char_data', field_en='test3')
 		df3.save()
+
+		tag1 = Tag(dataset=ds, tag="tag1")
+		tag1.save()
+		tag2 = Tag(dataset=ds, tag="tag2")
+		tag2.save()
+		tag3 = Tag(dataset=ds, tag="tag3")
+		tag3.save()
 
 		element1 = DataElement(mapelement=polygon, datafield=df1, int_data=23)
 		element1.save()
@@ -80,14 +85,21 @@ class TestCountPointsSerializer(TestCase):
 		element3 = DataElement(mapelement=polygon, datafield=df3, char_data='abc')
 		element3.save()
 
-		request = RequestFactory().put('/?data=all')
-		self.user = User.objects.get(username='test')
-		request.user = self.user
+		request = HttpRequest()
+		qdict = QueryDict('', mutable=True)
+		qdict.update({'tags': 'tag1,tag2,tag3'})
+		qdict.update({'match': 'all'})
+		qdict.update({'street': '8th St', 'city': 'Troy', 'state': 'NY'})
+		qdict.update({'max_lat': '52.5', 'min_lat': '18.9', 'max_lon': '108.1', 'min_lon': '22.1'})
+		qdict.update({'radius': 5, 'center': '42.7302,73.6788'})
+		request.GET = qdict
 		# convert the HTTP Request object to a REST framework Request object
 		self.request = APIView().initialize_request(request) 
 		serializer = CountPointsSerializer(context={'request': self.request})
-		self.assertEqual(serializer.get_count(polygon), 
-						 {'test1': 23, 'en1': 1.0, 'en2': 2.0, 'test2': 2.34, 'test3': 'abc'})
+		count = serializer.get_count(polygon)
+		self.assertEqual(count['test1'], 23)
+		self.assertEqual(count['test2'], 2.34)
+		self.assertEqual(count['en2'], 2.0)
 
 class TestAnalyzeAreaSerializer(TestCase):
 	fixtures = ['test_data.json']
@@ -108,7 +120,7 @@ class TestAnalyzeAreaSerializer(TestCase):
 		tagindiv2 = TagIndiv(tag=tag2, mapelement=self.mp)
 		tagindiv2.save()
 		# p1 = Polygon( ((0, 0), (3, 7), (10, 10), (0, 0)) )
- 	# 	p2 = Polygon( ((1, 1), (1, 4), (15, 15), (1, 1)) )
+ 		# p2 = Polygon( ((1, 1), (1, 4), (15, 15), (1, 1)) )
 		# mpoly = MultiPolygon(p1, p2)
 		# polygon = MapPolygon(lat='50.2340', lon='28.3282', field1=1.0, field2=2.0, mpoly=mpoly, dataset=ds, remote_id=1)
 		# polygon.save()
