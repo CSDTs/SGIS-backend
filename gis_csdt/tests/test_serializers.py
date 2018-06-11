@@ -152,10 +152,11 @@ class TestAnalyzeAreaNoValuesSerializer(TestCase):
 		tagindiv1.save()
 		tagindiv2 = TagIndiv(tag=tag2, mapelement=self.mp)
 		tagindiv2.save()
-		# p1 = Polygon( ((0, 0), (3, 7), (10, 10), (0, 0)) )
- 		# p2 = Polygon( ((1, 1), (1, 4), (15, 15), (1, 1)) )
+		# p1 = Polygon( ((2, 2), (11, 21), (39, 41), (2, 2)) )
+ 		# p2 = Polygon( ((1, 1), (10, 4), (48, 42), (1, 1)) )
+
 		# mpoly = MultiPolygon(p1, p2)
-		# polygon = MapPolygon(lat='50.2340', lon='28.3282', field1=1.0, field2=2.0, mpoly=mpoly, dataset=ds, remote_id=1)
+		# polygon = MapPolygon(lat='50.2340', lon='28.3282', field1=1.0, field2=2.0, mpoly=mpoly, dataset=ds, remote_id=10)
 		# polygon.save()
 	
 		self.request = HttpRequest()
@@ -179,7 +180,7 @@ class TestSensorSerializer(TestCase):
 		request = RequestFactory().get('/?data=all')
 		self.user = User.objects.get(username='test')
 		request.user = self.user
-		
+
 		attrs = {'name': 'sensor1', 'supplier': 'sss', 'model_number': 123, 'metric': 'm', 'accuracy': 0.001}
 		serializer = SensorSerializer(context={'request': request})
 		sensor = serializer.create(attrs)
@@ -195,3 +196,20 @@ class TestDataPointSerializer(TestCase):
 		attrs = {'value': 212}
 		point = serializer.create(attrs)
 		self.assertEqual(point.value, 212)
+
+class TestNewTagSerializer(TestCase):
+	fixtures = ['test_data.json']
+
+	def test_can_create_serializer(self):
+		ds = Dataset.objects.get(pk=2)
+		me = MapElement(name="abc", dataset=ds)
+		me.save()
+		tag = Tag(dataset=ds, tag='newtag')
+		tag.save()
+		serializer = NewTagSerializer()
+		validated_data = {'mapelement_id': me.id, 'tag': 'newtag'}
+		tagindiv = serializer.create(validated_data)
+		self.assertTrue(isinstance(tagindiv, TagIndiv))
+		self.assertEqual(tagindiv.tag, tag)
+		self.assertEqual(tagindiv.mapelement, me)
+		self.assertEqual(serializer.validate_tag(' test '), 'test')
