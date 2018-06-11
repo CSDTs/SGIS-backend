@@ -34,8 +34,18 @@ class TestTestSerializer(TestCase):
 
 	def test_can_create_serializer(self):
 		mp = MapPoint.objects.get(pk=1)
-		ds = Dataset.objects.get(pk=1)
-		me = MapElement(dataset=ds, mappoint=mp)
+		setattr(mp, "field1", "mp_field1")
+		setattr(mp, "field2", "mp_field2")
+		names = DatasetNameField(field1_name="field1", field2_name="field2", field3_name="field3")
+		names.save()
+		ds = Dataset(name="ds", names=names)
+		ds.save()
+		p1 = Polygon( ((0, 0), (0, 1), (1, 1), (0, 0)) )
+ 		p2 = Polygon( ((1, 1), (1, 2), (2, 2), (1, 1)) )
+		mpoly = MultiPolygon(p1, p2)
+		polygon = MapPolygon(lat='42.7302', lon='73.6788', field1=1.0, field2=2.0, mpoly=mpoly, dataset=ds)
+		polygon.save()
+		me = MapElement(dataset=ds, mappoint=mp, mappolygon=polygon)
 		me.save()
 		df = DataField(dataset=ds, field_type='I', field_name='int_data', field_en='test')
 		df.save()
@@ -49,7 +59,8 @@ class TestTestSerializer(TestCase):
 		serializer = TestSerializer(context={'request': self.request})
 		expected_address = {"street": "", "city": "Troy", "state": "NY", "zipcode": "", "county": ""}
 		self.assertEqual(serializer.get_address(me), expected_address)
-		self.assertEqual(serializer.get_data(me), {'test': 23})
+		self.assertEqual(serializer.get_data(me)['test'], 23)
+		self.assertEqual(serializer.get_geom(me)['type'], 'MultiPolygon')
 
 class TestCountPointsSerializer(TestCase):
 	fixtures = ['test_data.json']
@@ -57,6 +68,7 @@ class TestCountPointsSerializer(TestCase):
 	def test_can_create_serializer(self):
 		ds = Dataset.objects.get(pk=1)		
 		names = DatasetNameField(field1_en='en1', field2_en='en2')
+		names.save()
 		setattr(ds, "names", names)
 		p1 = Polygon( ((0, 0), (0, 1), (1, 1), (0, 0)) )
  		p2 = Polygon( ((1, 1), (1, 2), (2, 2), (1, 1)) )
@@ -88,7 +100,6 @@ class TestCountPointsSerializer(TestCase):
 		request = HttpRequest()
 		qdict = QueryDict('', mutable=True)
 		qdict.update({'tags': 'tag1,tag2,tag3'})
-		qdict.update({'match': 'all'})
 		qdict.update({'street': '8th St', 'city': 'Troy', 'state': 'NY'})
 		qdict.update({'max_lat': '52.5', 'min_lat': '18.9', 'max_lon': '108.1', 'min_lon': '22.1'})
 		qdict.update({'radius': 5, 'center': '42.7302,73.6788'})
@@ -216,12 +227,14 @@ class TestNewTagSerializer(TestCase):
 		ds = Dataset.objects.get(pk=2)
 		me = MapElement(name="abc", dataset=ds)
 		me.save()
-		tag = Tag(dataset=ds, tag='newtag')
-		tag.save()
+		tag1 = Tag(dataset=ds, tag='test', approved=True)
+		tag1.save()
+		tag2 = Tag(dataset=ds, tag='test', approved=True)
+		tag2.save()
 		serializer = NewTagSerializer()
-		validated_data = {'mapelement_id': me.id, 'tag': 'newtag'}
+		validated_data = {'mapelement_id': me.id, 'tag': 'test'}
 		tagindiv = serializer.create(validated_data)
 		self.assertTrue(isinstance(tagindiv, TagIndiv))
-		self.assertEqual(tagindiv.tag, tag)
+		self.assertEqual(tagindiv.tag, tag1)
 		self.assertEqual(tagindiv.mapelement, me)
 		self.assertEqual(serializer.validate_tag(' test '), 'test')

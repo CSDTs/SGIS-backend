@@ -9,7 +9,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.gis.geos import Polygon, MultiPolygon, Point
 
-from gis_csdt.models import Location, GeoCoordinates, DatasetNameField, Dataset, MapPoint, MapElement, Sensor, DataPoint, PhoneNumber, MapPolygon
+from gis_csdt.models import Location, GeoCoordinates, DatasetNameField, Dataset, MapPoint, MapElement, Sensor, DataPoint, PhoneNumber, MapPolygon, Tag, TagIndiv
 from gis_csdt.views import DataToGSM7
 from gis_csdt.serializers import TagCountSerializer, DatasetSerializer, MapPointSerializer, NewTagSerializer, MapPolygonSerializer, CountPointsSerializer, AnalyzeAreaSerializer, AnalyzeAreaNoValuesSerializer, DataPointSerializer, SensorSerializer
 
@@ -20,29 +20,6 @@ from decimal import Decimal
 from datetime import datetime
 import pytz
 User = get_user_model()
-
-class AllViewTestsNoData(APITestCase):
-    def test_no_datasets(self):
-        response = self.client.get('/api-ds/')
-        self.assertEqual(response.status_code, 200)
-    def test_no_mappoints(self):
-        response = self.client.get('/api-mp/')
-        self.assertEqual(response.status_code, 200)
-    def test_no_newtags(self):
-        response = self.client.get('/api-newtag/')
-        self.assertEqual(response.status_code, 200)
-    def test_no_polygons(self):
-        response = self.client.get('/api-poly/')
-        self.assertEqual(response.status_code, 200)
-    def test_no_mappoints_geojson(self):
-        response = self.client.get('/api-test/')
-        self.assertEqual(response.status_code, 200)
-    def test_no_mappolygons_count_of_points(self):
-        response = self.client.get('/api-count/')
-        self.assertEqual(response.status_code, 200)
-    def test_no_mappolygons_analysis_around_point(self):
-        response = self.client.get('/api-dist/')
-        self.assertEqual(response.status_code, 400)
 
 class TestDataset(TestCase):
     fixtures = ['test_data.json']
@@ -98,6 +75,7 @@ class TestDataPoint(TestCase):
         mappoint.save()   
         sensor = Sensor.objects.create(name='test', user=user, mappoint=mappoint)
         sensor.save()
+        self.assertEqual(str(sensor), 'id: test')
         dp1 = DataPoint(value=25)
         dp1.save()
         sensor.datapoints.add(dp1)
@@ -106,6 +84,7 @@ class TestDataPoint(TestCase):
         sensor.datapoints.add(dp2)
         self.assertEqual(sensor.mappoint.lat, 43.0831)
         self.assertEqual(sensor.datapoints.filter(value=20).count(), 1)
+        self.assertEqual(str(dp1), 'value: 25 time: None')
 
 class TestMapElement(TestCase):
     fixtures = ['test_data.json']
@@ -125,3 +104,26 @@ class TestMapElement(TestCase):
         self.assertEqual(me.name, 'element')
         self.assertEqual(me.polygon_id(), me.id)
         self.assertEqual(me.point_id(), me.id)
+
+class TestTag(TestCase):
+    fixtures = ['test_data.json']
+
+    def test_can_create_tag(self):
+        ds = Dataset.objects.get(pk=1)
+        original_count = Tag.objects.all().count()
+        tag1 = Tag(tag='1', dataset=ds)
+        tag1.save()
+        tag2 = Tag(tag='2', dataset=ds)
+        tag2.save()
+        self.assertEqual(Dataset.objects.all().count(), original_count + 2)
+        self.assertEqual(str(tag1), '1')
+        me = MapElement.objects.get(pk=1)
+        tagindiv1 = TagIndiv(tag=tag1, mapelement=me)
+        tagindiv1.save()
+        me1 = MapElement(dataset=ds, name="me1")
+        me1.save()
+        tagindiv2 = TagIndiv(tag=tag1, mapelement=me1)
+        self.assertEqual(str(tagindiv2), 'me1 tagged as "1"')
+        tagindiv2.save()
+        tag1.recount()
+        self.assertEqual(tag1.count, 1)
