@@ -100,7 +100,7 @@ def filter_request(parameters, model_type):
             radius = int(parameters['radius'])
         except:
             return HttpResponseBadRequest('Invalid radius. Only integers accepted.')
-        temp = parameters.split(',')
+        temp = parameters['center'].split(',')
         try:
             if len(temp) != 2:
                 raise 
