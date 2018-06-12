@@ -57,7 +57,6 @@ class SMSCreateData(LiveServerTestCase):
         phNum = PhoneNumber.objects.create(phone_number=11111111111,user=self.user)
         phNum.save()
         data = [1,1,0,128,129,300,10001]
-        data[1] = mappoint.id # get the correct point id
         data[0] = sensor.id
         string = DataToGSM7(data)
         postData = {'Body': string.encode('utf-8'), 'From': phNum.phone_number}

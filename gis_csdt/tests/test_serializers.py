@@ -62,6 +62,17 @@ class TestTestSerializer(TestCase):
 		self.assertEqual(serializer.get_data(me)['test'], 23)
 		self.assertEqual(serializer.get_geom(me)['type'], 'MultiPolygon')
 
+		tag1 = Tag(dataset=ds, tag='tag1', approved=True, count=1)
+		tag1.save()
+		tag2 = Tag(dataset=ds, tag='tag2', approved=True, count=1)
+		tag2.save()
+		tagindiv1 = TagIndiv(tag=tag1, mapelement=me)
+		tagindiv1.save()
+		tagindiv2 = TagIndiv(tag=tag2, mapelement=me)
+		tagindiv2.save()
+		self.assertTrue('tag1' in serializer.get_tags(me))
+		self.assertTrue('tag2' in serializer.get_tags(me))
+
 class TestCountPointsSerializer(TestCase):
 	fixtures = ['test_data.json']
 
