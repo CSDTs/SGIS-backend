@@ -106,6 +106,25 @@ class DatasetSerializer(serializers.ModelSerializer):
         model = Dataset
         fields = ('id','name','cached','count','tags')
 
+class LocationSerializer(serializers.ModelSerializer):
+    street = serializers.CharField(source = 'location.street')
+    city = serializers.CharField(source = 'location.city')
+    state = serializers.CharField(source = 'location.state')
+    zipcode = serializers.CharField(source = 'location.zipcode')
+    county = serializers.CharField(source = 'location.county')
+
+class GeoCoordinatesSerializer(serializers.ModelSerializer):
+    latitude = serializers.DecimalField(source = 'geocoor.lat', max_digits=18, decimal_places=15)
+    longitude = serializers.DecimalField(source = 'geocoor.lon', max_digits=18, decimal_places=15)
+
+class DatasetNameFieldSerializer(serializers.ModelSerializer):
+    field1_en = serializers.CharField(source = 'ds_names.field1_en')
+    field2_en = serializers.CharField(source = 'ds_names.field2_en')
+    field3_en = serializers.CharField(source = 'ds_names.field3_en')
+    field1_name = serializers.CharField(source = 'ds_names.field1_name')
+    field2_name = serializers.CharField(source = 'ds_names.field2_name')
+    field3_name = serializers.CharField(source = 'ds_names.field3_name')
+
 class MapPointSerializer(serializers.HyperlinkedModelSerializer):
     latitude = serializers.DecimalField(source = 'mappoint.lat', max_digits=18, decimal_places=15)
     longitude = serializers.DecimalField(source = 'mappoint.lon', max_digits=18, decimal_places=15)
@@ -500,13 +519,14 @@ class SensorSerializer(serializers.ModelSerializer):
     model_number = serializers.CharField(max_length=100)
     metric = serializers.CharField(max_length=100)
     accuracy = serializers.CharField(max_length=100)
+
     class Meta:
         model = Sensor
         fields = ('name', 'supplier', 'model_number', 'metric', 'accuracy')
     def create(self, attrs, instance=None):
         thisUser = self.context['request'].user
         sensorModel = Sensor(name=attrs['name'].strip(), supplier=attrs['supplier'].strip(), model_number=attrs['model_number'],
-                             metric=attrs['metric'], accuracy=attrs['accuracy'], user_id=thisUser.id)
+                             metric=attrs['metric'], accuracy=attrs['accuracy'], user=thisUser)
         sensorModel.save()
         return sensorModel
 

@@ -13,8 +13,8 @@ from django.core.paginator import Paginator
 from django.http import HttpResponse, HttpRequest,  HttpResponseNotAllowed, HttpResponseRedirect
 from django.shortcuts import render
 from gis_csdt.filter_tools import filter_request, neighboring_points
-from gis_csdt.models import Dataset, MapElement, MapPoint, Tag, MapPolygon, TagIndiv, DataField, DataElement, Sensor, DataPoint, PhoneNumber
-from gis_csdt.serializers import TagCountSerializer, DatasetSerializer, MapPointSerializer, NewTagSerializer, MapPolygonSerializer, CountPointsSerializer, AnalyzeAreaSerializer, AnalyzeAreaNoValuesSerializer, DataPointSerializer, SensorSerializer
+from gis_csdt.models import Location, GeoCoordinates, DatasetNameField, Dataset, MapElement, MapPoint, Tag, MapPolygon, TagIndiv, DataField, DataElement, Sensor, DataPoint, PhoneNumber
+from gis_csdt.serializers import TagCountSerializer, DatasetNameFieldSerializer, LocationSerializer, GeoCoordinatesSerializer, DatasetSerializer, MapPointSerializer, NewTagSerializer, MapPolygonSerializer, CountPointsSerializer, AnalyzeAreaSerializer, AnalyzeAreaNoValuesSerializer, DataPointSerializer, SensorSerializer
 from decimal import Decimal
 import json
 #import csv
@@ -96,7 +96,6 @@ def DataToGSM7(values):
 @csrf_exempt
 def SMSSubmitDataPointView(request):
     DATASIZE = 2  # 2 GSM-7 chars
-
     data = request.POST.get('Body')
     phNum = int(request.POST.get('From'))
     #user = PhoneNumber.objects.get(phone_number=phNum).user
@@ -141,6 +140,18 @@ class TagCountViewSet(PaginatedReadOnlyModelViewSet):
 class DatasetViewSet(PaginatedReadOnlyModelViewSet):
     queryset = Dataset.objects.all()
     serializer_class = DatasetSerializer
+
+class LocationViewSet(PaginatedReadOnlyModelViewSet):
+    queryset = Location.objects.all()
+    serializer_class = LocationSerializer
+
+class GeoCoordinatesViewSet(PaginatedReadOnlyModelViewSet):
+    queryset = GeoCoordinates.objects.all()
+    serializer_class = GeoCoordinatesSerializer
+
+class DatasetNameFieldViewSet(PaginatedReadOnlyModelViewSet):
+    queryset = DatasetNameField.objects.all()
+    serializer_class = DatasetNameFieldSerializer
 
 class AddDatasetView(generics.ListCreateAPIView):
     queryset = Dataset.objects.all()
