@@ -115,7 +115,7 @@ class TestTag(TestCase):
         tag1.save()
         tag2 = Tag(tag='2', dataset=ds)
         tag2.save()
-        self.assertEqual(Dataset.objects.all().count(), original_count + 2)
+        self.assertEqual(Tag.objects.all().count(), original_count + 2)
         self.assertEqual(str(tag1), '1')
         me = MapElement.objects.get(pk=1)
         tagindiv1 = TagIndiv(tag=tag1, mapelement=me)

@@ -127,8 +127,7 @@ class TestAnalyzeAreaSerializer(TestCase):
 	fixtures = ['test_data.json']
 
 	def setUp(self):
-		ds = Dataset(name="census2016")
-		ds.save()
+		ds = Dataset.objects.get(pk=3)
 		self.mp = MapPoint.objects.get(pk=1)
 		self.mp.dataset = ds
 		self.mp.point = Point(5, 23)
@@ -141,12 +140,7 @@ class TestAnalyzeAreaSerializer(TestCase):
 		tagindiv1.save()
 		tagindiv2 = TagIndiv(tag=tag2, mapelement=self.mp)
 		tagindiv2.save()
-		# p1 = Polygon( ((0, 0), (3, 7), (10, 10), (0, 0)) )
- 		# p2 = Polygon( ((1, 1), (1, 4), (15, 15), (1, 1)) )
-		# mpoly = MultiPolygon(p1, p2)
-		# polygon = MapPolygon(lat='50.2340', lon='28.3282', field1=1.0, field2=2.0, mpoly=mpoly, dataset=ds, remote_id=1)
-		# polygon.save()
-	
+
 		self.request = HttpRequest()
 		qdict = QueryDict('', mutable=True)
 		qdict.update({'year': '2014'})
@@ -172,8 +166,7 @@ class TestAnalyzeAreaNoValuesSerializer(TestCase):
 	fixtures = ['test_data.json']
 
 	def setUp(self):
-		ds = Dataset(name="census2016")
-		ds.save()
+		ds = Dataset.objects.get(pk=3)
 		self.mp = MapPoint.objects.get(pk=1)
 		setattr(self.mp, 'dataset', ds)
 		self.mp.point = Point(5, 23)
