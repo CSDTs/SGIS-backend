@@ -1,16 +1,12 @@
 from gis_csdt.models import Dataset, MapElement, MapPoint, Tag, TagIndiv, MapPolygon, DataField, DataElement, Sensor, DataPoint
 from gis_csdt.filter_tools import filter_request, neighboring_points, unite_radius_bubbles
-from gis_csdt.geometry_tools import circle_as_polygon
 from gis_csdt.settings import CENSUS_API_KEY
-from rest_framework import serializers, exceptions
+from rest_framework import serializers
 from rest_framework_gis import serializers as gis_serializers
-from django.contrib.gis.measure import Distance, Area
+from django.contrib.gis.measure import Distance
 from django.contrib.gis.geos import GEOSGeometry
-from django.core.exceptions import ObjectDoesNotExist
-from django.core import serializers as model_serializers
-from django.forms.models import model_to_dict
-from django.db.models import Sum, Count
-from django.http import HttpResponse, HttpRequest, HttpResponseBadRequest, HttpResponseNotAllowed, JsonResponse
+from django.db.models import Sum
+from django.http import HttpResponseBadRequest
 from django import VERSION as DJANGO_VERSION
 import copy, json, urllib
 

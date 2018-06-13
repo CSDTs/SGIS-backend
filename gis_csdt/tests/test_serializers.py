@@ -175,7 +175,7 @@ class TestAnalyzeAreaNoValuesSerializer(TestCase):
 		ds = Dataset(name="census2016")
 		ds.save()
 		self.mp = MapPoint.objects.get(pk=1)
-		self.mp.dataset = ds
+		setattr(self.mp, 'dataset', ds)
 		self.mp.point = Point(5, 23)
 		MapPoint(lat=23.41, lon=98.0, dataset=ds, point=Point(5, 23), state='NY', city='NYC').save()
 		tag1 = Tag(dataset=ds, tag='tag1', approved=True, count=1)
@@ -186,13 +186,12 @@ class TestAnalyzeAreaNoValuesSerializer(TestCase):
 		tagindiv1.save()
 		tagindiv2 = TagIndiv(tag=tag2, mapelement=self.mp)
 		tagindiv2.save()
-		# p1 = Polygon( ((2, 2), (11, 21), (39, 41), (2, 2)) )
- 		# p2 = Polygon( ((1, 1), (10, 4), (48, 42), (1, 1)) )
+		p1 = Polygon( ((2, 2), (11, 21), (39, 41), (2, 2)) )
+ 		p2 = Polygon( ((1, 1), (10, 4), (48, 42), (1, 1)) )
+		mpoly = MultiPolygon(p1, p2)
+		polygon = MapPolygon(lat='50.2340', lon='28.3282', field1=1.0, field2=2.0, mpoly=mpoly, dataset=ds, remote_id=10)
+		polygon.save()
 
-		# mpoly = MultiPolygon(p1, p2)
-		# polygon = MapPolygon(lat='50.2340', lon='28.3282', field1=1.0, field2=2.0, mpoly=mpoly, dataset=ds, remote_id=10)
-		# polygon.save()
-	
 		self.request = HttpRequest()
 		qdict = QueryDict('', mutable=True)
 		qdict.update({'year': '2014'})

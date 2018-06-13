@@ -1,26 +1,17 @@
 # -*- coding: utf8 -*-
-import sys
-import binascii
-from rest_framework import views, viewsets, permissions, response, pagination, generics, status
+from rest_framework import generics, permissions, status, viewsets
 from rest_framework.settings import api_settings
 from rest_framework_csv.renderers import CSVRenderer
 from rest_framework.exceptions import ParseError #, APIException
 from django.contrib.gis.db.models import Count
-from django.contrib.gis.geos import Polygon, Point
-from django.contrib.gis.measure import Distance, Area
-from django.views.generic.edit import CreateView
-from django.core.paginator import Paginator
-from django.http import HttpResponse, HttpRequest,  HttpResponseNotAllowed, HttpResponseRedirect
-from django.shortcuts import render
+from django.contrib.gis.measure import Distance
+from django.http import HttpResponse
 from gis_csdt.filter_tools import filter_request, neighboring_points
-from gis_csdt.models import Location, GeoCoordinates, DatasetNameField, Dataset, MapElement, MapPoint, Tag, MapPolygon, TagIndiv, DataField, DataElement, Sensor, DataPoint, PhoneNumber
+from gis_csdt.models import DataPoint, Dataset, DatasetNameField, GeoCoordinates, Location, MapElement, MapPoint, MapPolygon, Sensor, Tag, TagIndiv
 from gis_csdt.serializers import TagCountSerializer, DatasetNameFieldSerializer, LocationSerializer, GeoCoordinatesSerializer, DatasetSerializer, MapPointSerializer, NewTagSerializer, MapPolygonSerializer, CountPointsSerializer, AnalyzeAreaSerializer, AnalyzeAreaNoValuesSerializer, DataPointSerializer, SensorSerializer
-from decimal import Decimal
-import json
 #import csv
 from gis_csdt.serializers import TestSerializer
 from django.views.decorators.csrf import csrf_exempt
-from twilio.twiml.messaging_response import MessagingResponse
 
 ###constants for pagination
 PAGINATE_BY_CONST = 100
