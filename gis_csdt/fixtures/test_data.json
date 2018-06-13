@@ -35,6 +35,13 @@
 },
 {
   "fields": {
+    "name": "census2016"
+  },
+  "model": "gis_csdt.dataset",
+  "pk": 3
+},
+{
+  "fields": {
     "lat": 42.7302,
     "lon": 73.6788,
     "city": "Troy",
