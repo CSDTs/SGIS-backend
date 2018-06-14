@@ -1,17 +1,20 @@
 from django.contrib import admin
-from django.core import urlresolvers
-from gis_csdt.models import Location, GeoCoordinates, DatasetNameField, Dataset, MapPoint, PhoneNumber, Tag, MapPolygon, TagIndiv, DataField, DataElement, Sensor, DataPoint
+from gis_csdt.models import Location, GeoCoordinates, DatasetNameField, \
+                            Dataset, MapPoint, PhoneNumber, Tag, MapPolygon, \
+                            TagIndiv, DataField, DataElement, Sensor, DataPoint
+
 
 class DatasetAdmin(admin.ModelAdmin):
     fieldsets = [
-        (None,              {'fields': ['name','url','cache_max_age']}),
-        ('Field Mapping',	{'fields': ['remote_id_field','name_field', 'location', 'coordinates']}),
-       	('Custom Field', 	{'fields': ['names']}),
+        (None,              {'fields': ['name', 'url', 'cache_max_age']}),
+        ('Field Mapping',	{'fields': ['remote_id_field', ' name_field',
+                             'location', 'coordinates']}),
+        ('Custom Field', 	{'fields': ['names']}),
         ('Geocoding',		{'fields': ['needs_geocoding']})]
-    
+
 
 admin.site.register(Dataset, DatasetAdmin)
-#for testing
+# for testing
 admin.site.register(MapPoint)
 admin.site.register(Tag)
 admin.site.register(MapPolygon)
