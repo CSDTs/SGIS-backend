@@ -7,8 +7,7 @@ from gis_csdt.models import Location, GeoCoordinates, DatasetNameField, \
 class DatasetAdmin(admin.ModelAdmin):
     fieldsets = [
         (None,              {'fields': ['name', 'url', 'cache_max_age']}),
-        ('Field Mapping',	{'fields': ['remote_id_field', ' name_field',
-                             'location', 'coordinates']}),
+        ('Field Mapping',	{'fields': ['remote_id_field', 'name_field', 'location', 'coordinates']}),
         ('Custom Field', 	{'fields': ['names']}),
         ('Geocoding',		{'fields': ['needs_geocoding']})]
 
