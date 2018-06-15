@@ -19,11 +19,18 @@ class Location(models.Model):
     county_field = models.CharField(max_length=50, default='county',
                                     blank=True)
 
+    def __unicode__(self):
+        return self.street_field + ", " + self.county_field + ", " + self.city_field \
+               + " " + self.state_field + '\n' + self.zipcode_field
+
 
 class GeoCoordinates(models.Model):
     lat_field = models.CharField(max_length=50, default='latitude', blank=True)
     lon_field = models.CharField(max_length=50, default='longitude',
                                  blank=True)
+
+    def __unicode__(self): 
+        return "latitude: " + self.lat_field + ", longitude: " + self.lon_field
 
 
 class DatasetNameField(models.Model):
