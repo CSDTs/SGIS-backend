@@ -18,6 +18,22 @@
   "pk": 1
 },
 {
+  "fields": {
+    "lat_field": "15.2314",
+    "lon_field": "32.3412"
+  },
+  "model": "gis_csdt.geocoordinates",
+  "pk": 1
+},
+{
+  "fields": {
+    "street_field": "eighth st",
+    "city_field": "Troy"
+  },
+  "model": "gis_csdt.location",
+  "pk": 1
+},
+{
 	"fields": {
     	"name": "Husdon River",
     	"cached": "2014-12-22T12:06:50.752Z"	
@@ -28,7 +44,8 @@
 {
 	"fields": {
     	"name": "RPI",
-    	"cached": "2017-10-12T12:46:00.258Z"	
+    	"cached": "2017-10-12T12:46:00.258Z",
+      "location": 1
   	},
   	"model": "gis_csdt.dataset",
   	"pk": 2
@@ -66,8 +83,15 @@
 },
 {
   "fields": {
+    "value": 15.18
+  },
+  "model": "gis_csdt.datapoint",
+  "pk": 2
+},
+{
+  "fields": {
     "name": "sensor1",
-    "datapoints": [1],
+    "datapoints": [1, 2],
     "mappoint": 1
   },
   "model": "gis_csdt.sensor",
