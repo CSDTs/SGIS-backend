@@ -41,6 +41,11 @@ class DatasetNameField(models.Model):
     field3_en = models.CharField(blank=True, max_length=150)
     field3_name = models.CharField(blank=True, max_length=50)
 
+    def __unicode__(self):
+        return self.field1_name + ", " + self.field1_en + ";\n" \
+               + self.field2_name + ", " + self.field2_en + ";\n" \
+               + self.field3_name + ", " + self.field3_en + ";"
+
 
 BATCH_SIZE = 5000
 

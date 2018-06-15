@@ -34,9 +34,21 @@
   "pk": 1
 },
 {
+  "fields": {
+    "field1_name": "name1",
+    "field1_en": "en1",
+    "field2_name": "name2",
+    "field2_en": "en2",
+    "field3_name": "name3",
+    "field3_en": "en3"
+  },
+  "model": "gis_csdt.datasetnamefield",
+  "pk": 1
+},
+{
 	"fields": {
     	"name": "Husdon River",
-    	"cached": "2014-12-22T12:06:50.752Z"	
+    	"cached": "2014-12-22T12:06:50.752Z"
   	},
   	"model": "gis_csdt.dataset",
   	"pk": 1
@@ -56,6 +68,15 @@
   },
   "model": "gis_csdt.dataset",
   "pk": 3
+},
+{
+  "fields": {
+    "name": "cgdf",
+    "coordinates": 1,
+    "names": 1
+  },
+  "model": "gis_csdt.dataset",
+  "pk": 4
 },
 {
   "fields": {
