@@ -106,7 +106,7 @@ class DatasetSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Dataset
-        fields = ('id', 'name', 'cached', 'count', 'tags')
+        fields = ('id', 'name', 'cached', 'count', 'tags', 'name_field')
 
 
 class LocationSerializer(serializers.ModelSerializer):
@@ -584,12 +584,28 @@ class AnalyzeAreaSerializer(serializers.ModelSerializer):
         return data_sums
 
 
+class DataPointSerializer(serializers.ModelSerializer):
+    value = serializers.DecimalField(max_digits=30, decimal_places=15)
+    time = serializers.DateTimeField()
+    
+    class Meta:
+        model = DataPoint
+        fields = ('value', 'time')
+
+    def create(self, attrs, instance=None):
+        datapointModel = DataPoint(value=attrs['value'])
+        datapointModel.save()
+        return datapointModel
+
+
 class SensorSerializer(serializers.ModelSerializer):
     name = serializers.CharField(max_length=100)
     supplier = serializers.CharField(max_length=100)
     model_number = serializers.CharField(max_length=100)
     metric = serializers.CharField(max_length=100)
     accuracy = serializers.CharField(max_length=100)
+    datapoints = DataPointSerializer(many=True, read_only=True)
+    points = MapPointSerializer(many=True, read_only=True)
 
     class Meta:
         model = Sensor
@@ -602,24 +618,9 @@ class SensorSerializer(serializers.ModelSerializer):
                              model_number=attrs['model_number'],
                              metric=attrs['metric'],
                              accuracy=attrs['accuracy'],
-                             user=thisUser)
+                             user_id=thisUser)
         sensorModel.save()
         return sensorModel
-
-
-class DataPointSerializer(serializers.ModelSerializer):
-    value = serializers.DecimalField(max_digits=30, decimal_places=15)
-    sensors = SensorSerializer(many=True, read_only=True)
-    points = MapPointSerializer(many=True, read_only=True)
-
-    class Meta:
-        model = DataPoint
-        fields = ('__all__')
-
-    def create(self, attrs, instance=None):
-        datapointModel = DataPoint(value=attrs['value'])
-        datapointModel.save()
-        return datapointModel
 
 
 class AnalyzeAreaNoValuesSerializer(serializers.ModelSerializer):

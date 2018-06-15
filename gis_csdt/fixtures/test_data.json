@@ -56,5 +56,21 @@
   },
   "model": "gis_csdt.mapelement",
   "pk": 1
+},
+{
+  "fields": {
+    "value": 23.42
+  },
+  "model": "gis_csdt.datapoint",
+  "pk": 1
+},
+{
+  "fields": {
+    "name": "sensor1",
+    "datapoints": [1],
+    "mappoint": 1
+  },
+  "model": "gis_csdt.sensor",
+  "pk": 1
 }
 ]

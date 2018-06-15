@@ -42,11 +42,10 @@ class Dataset(models.Model):
     name = models.CharField(max_length=200)
     url = models.URLField(blank=True, max_length=300)
     cached = models.DateTimeField(null=True, blank=True)
-    cache_max_age = models.IntegerField('age when cache should be \
-                                        replaced in days', default=1)
+    cache_max_age = models.IntegerField('age when cache should be replaced in days',
+                                        default=1)
     # field names
-    remote_id_field = models.CharField('column name of key field on \
-                                       the remote server',
+    remote_id_field = models.CharField('column name of key field on the remote server',
                                        blank=True, max_length=50, default='id')
     name_field = models.CharField(max_length=50, default='name')
     needs_geocoding = models.BooleanField(default=False)
@@ -401,8 +400,8 @@ class Sensor(models.Model):
     model_number = models.CharField(max_length=100, default='model_number')
     metric = models.CharField(max_length=100, default='metric')
     accuracy = models.CharField(max_length=100, default='accuracy')
+    user = models.ForeignKey(get_user_model(), blank=True, null=True)
     datapoints = models.ManyToManyField(DataPoint)
-    user = models.ForeignKey(get_user_model(), null=True)
     mappoint = models.ForeignKey(MapPoint, related_name='points', null=True)
 
     def __unicode__(self):

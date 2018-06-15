@@ -1,15 +1,20 @@
-##This file includes functions to load basic information
-##should be used from the shell
+# This file includes functions to load basic information
+# should be used from the shell
 
-import os, decimal, json, urllib, ftplib, zipfile, csv
+import csv
+import ftplib
+import json
+import os
+import urllib
+import zipfile
 from django.contrib.gis.utils import LayerMapping
 from models import MapPolygon, MapElement, MapPoint, Dataset, DataField, DataElement, Tag, TagIndiv
 from datetime import datetime
 from django.utils.timezone import utc
 from django.conf import settings
-from django.contrib.gis.geos import Polygon, Point
-from django.db import connection, IntegrityError
-from django.db.models import Max, Min
+from django.contrib.gis.geos import Point
+from django.db import IntegrityError
+from django.db.models import Max
 from django.core.exceptions import ObjectDoesNotExist
 from settings import DEBUG
 
@@ -26,16 +31,16 @@ def run(verbose=True, year=2010, starting_state=1):
         ds = dataset_qs[0]
         ds.cached = datetime.utcnow().replace(tzinfo=utc),
     else:
-        ds = Dataset(name = str(year) + ' Census Tracts',
-            cached = datetime.utcnow().replace(tzinfo=utc),
-            cache_max_age = 1000,
-            name_field = 'NAMELSAD'+str(year)[-2:],
-            lat_field = 'INTPTLAT'+str(year)[-2:],
-            lon_field = 'INTPTLON'+str(year)[-2:],
-            field1_en = 'Land Area',
-            field1_name = 'ALAND'+str(year)[-2:],
-            field2_en = 'Water Area',
-            field2_name = 'AWATER'+str(year)[-2:])
+        ds = Dataset(name=str(year)+' Census Tracts',
+                     cached=datetime.utcnow().replace(tzinfo=utc),
+                     cache_max_age=1000,
+                     name_field='NAMELSAD'+str(year)[-2:],
+                     lat_field='INTPTLAT'+str(year)[-2:],
+                     lon_field='INTPTLON'+str(year)[-2:],
+                     field1_en='Land Area',
+                     field1_name='ALAND'+str(year)[-2:],
+                     field2_en='Water Area',
+                     field2_name='AWATER'+str(year)[-2:])
         if year == 2010:
             ds.remote_id_field = 'GEOID00'
         elif year == 2000:
@@ -44,18 +49,18 @@ def run(verbose=True, year=2010, starting_state=1):
 
 
     tract_mapping = {
-        'remote_id' : ds.remote_id_field,
-        'name' : ds.name_field,
-        'lat' : ds.lat_field,
-        'lon' : ds.lon_field,
-        'field1' : ds.field1_name,
-        'field2' : ds.field2_name,
-        'mpoly' : 'MULTIPOLYGON',
+        'remote_id': ds.remote_id_field,
+        'name': ds.name_field,
+        'lat': ds.lat_field,
+        'lon': ds.lon_field,
+        'field1': ds.field1_name,
+        'field2': ds.field2_name,
+        'mpoly': 'MULTIPOLYGON',
     }
 
     ftp = ftplib.FTP('ftp2.census.gov')
     ftp.login()
-    ftp.cwd("/geo/tiger/TIGER2010/TRACT/"+str(year)+"/")
+    ftp.cwd("/geo/tiger/TIGER2010/TRACT/" + str(year) + "/")
     files = ftp.nlst()
 
     MapPolygon.objects.filter(dataset_id__isnull=True).delete()
@@ -288,7 +293,7 @@ def tag_helper(data, name_field, dataset, tag):
             tags = appr_tags
         tag = tags[0]
     elif tags.count() == 0:
-        tag = Tag(dataset_id = dataset, tag = tag, approved = True)
+        tag = Tag(dataset_id=dataset, tag=tag, approved=True)
         tag.save()
     else:
         tag = tags[0]
@@ -299,7 +304,7 @@ def tag_helper(data, name_field, dataset, tag):
         print name
         for mp in mps.filter(name__iregex=name):
             print mp.name
-            t = TagIndiv(tag = tag, mapelement = mp)
+            t = TagIndiv(tag=tag, mapelement=mp)
             try:
                 t.save()
             except IntegrityError:
@@ -321,7 +326,7 @@ def add_point_to_mp(dataset=None):
 def hazardous_waste(year=2011, verbose=True):
     try:
         dataset = Dataset.objects.get(name="Hazardous Waste Sites "+str(year))
-        dataset.cached=datetime.utcnow().replace(tzinfo=utc)
+        dataset.cached = datetime.utcnow().replace(tzinfo=utc)
     except ObjectDoesNotExist:
         dataset = Dataset(
             name="Hazardous Waste Sites "+str(year),
@@ -346,8 +351,14 @@ def hazardous_waste(year=2011, verbose=True):
 
     MapPoint.objects.filter(dataset=dataset).delete()
 
-    for state in ['AL','AK','AZ','AR','CA','CO','CT','DE','DC','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY']:
-        short_name = 'Envirofacts_Biennial_Report_Search '+state+'.CSV'
+    for state in ['AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE',
+                  'DC', 'FL', 'GA', 'HI', 'ID', 'IL', 'IN', 'IA',
+                  'KS', 'KY', 'LA', 'ME', 'MD', 'MA', 'MI', 'MN',
+                  'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ', 'NM',
+                  'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI',
+                  'SC', 'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA',
+                  'WV', 'WI', 'WY']:
+        short_name = 'Envirofacts_Biennial_Report_Search ' + state + '.CSV'
         path = os.path.abspath(os.path.join(os.path.dirname(__file__), 'data/ej/'+str(year)+'/'+short_name))
         if not os.path.isfile(path):
             if verbose:
@@ -438,99 +449,99 @@ def load_from_se(year=2000):
             # 'SE_T015_015':'Hispanic or Latino: Native Hawaiian and Other Pacific Islander Alone',
             # 'SE_T015_016':'Hispanic or Latino: Some other race Alone',
             # 'SE_T015_017':'Hispanic or Latino: Two or more races',
-            'SE_T016_001':'T16. Total Population',
-            'SE_T016_002':'T16. White Alone',
-            'SE_T016_003':'T16. Black or African American Alone',
-            'SE_T016_004':'T16. American Indian and Alaska Native Alone',
-            'SE_T016_005':'T16. Asian Alone',
-            'SE_T016_006':'T16. Native Hawaiian and Other Pacific Islander Alone',
-            'SE_T016_007':'T16. Some other race Alone',
-            'SE_T016_008':'T16. Two or more races',
-            'SE_T017_001':'T17. Total Population',
-            'SE_T017_002':'T17. Not Hispanic or Latino',
-            # 'SE_T017_003':'Not Hispanic or Latino: White Alone',
-            # 'SE_T017_004':'Not Hispanic or Latino: Black or African American Alone',
-            # 'SE_T017_005':'Not Hispanic or Latino: American Indian and Alaska Native Alone',
-            # 'SE_T017_006':'Not Hispanic or Latino: Asian Alone',
-            # 'SE_T017_007':'Not Hispanic or Latino: Native Hawaiian and Other Pacific Islander Alone',
-            # 'SE_T017_008':'Not Hispanic or Latino: Some other race Alone',
-            # 'SE_T017_009':'Not Hispanic or Latino: Two or more races',
-            'SE_T017_010':'T17. Hispanic or Latino',
-            # 'SE_T017_011':'Hispanic or Latino: White Alone',
-            # 'SE_T017_012':'Hispanic or Latino: Black or African American Alone',
-            # 'SE_T017_013':'Hispanic or Latino: American Indian and Alaska Native Alone',
-            # 'SE_T017_014':'Hispanic or Latino: Asian Alone',
-            # 'SE_T017_015':'Hispanic or Latino: Native Hawaiian and Other Pacific Islander Alone',
-            # 'SE_T017_016':'Hispanic or Latino: Some other race Alone',
-            # 'SE_T017_017':'Hispanic or Latino: Two or more races',
-            # 'SE_T092_001':'Households',
-            # 'SE_T092_002':'Household Income: Less than $10,000',
-            # 'SE_T092_003':'Household Income: $10,000 to $14,999',
-            # 'SE_T092_004':'Household Income: $15,000 to $19,999',
-            # 'SE_T092_005':'Household Income: $20,000 to $24,999',
-            # 'SE_T092_006':'Household Income: $25,000 to $29,999',
-            # 'SE_T092_007':'Household Income: $30,000 to $34,999',
-            # 'SE_T092_008':'Household Income: $35,000 to $39,999',
-            # 'SE_T092_009':'Household Income: $40,000 to $44,999',
-            # 'SE_T092_010':'Household Income: $45,000 to $49,999',
-            # 'SE_T092_011':'Household Income: $50,000 to $59,999',
-            # 'SE_T092_012':'Household Income: $60,000 to $74,999',
-            # 'SE_T092_013':'Household Income: $75,000 to $99,999',
-            # 'SE_T092_014':'Household Income: $100,000 to $124,999',
-            # 'SE_T092_015':'Household Income: $125,000 to $149,999',
-            # 'SE_T092_016':'Household Income: $150,000 to $199,999',
-            # 'SE_T092_017':'Household Income: $200,000 or more',
-            # 'SE_T092A001':'Households',
-            # 'SE_T092A002':'Less than $10,000',
-            # 'SE_T092A003':'Less than $15,000',
-            # 'SE_T092A004':'Less than $20,000',
-            # 'SE_T092A005':'Less than $25,000',
-            # 'SE_T092A006':'Less than $30,000',
-            # 'SE_T092A007':'Less than $35,000',
-            # 'SE_T092A008':'Less than $40,000',
-            # 'SE_T092A009':'Less than $45,000',
-            # 'SE_T092A010':'Less than $50,000',
-            # 'SE_T092A011':'Less than $60,000',
-            # 'SE_T092A012':'Less than $75,000',
-            # 'SE_T092A013':'Less than $100,000',
-            # 'SE_T092A014':'Less than $125,000',
-            # 'SE_T092A015':'Less than $150,000',
-            # 'SE_T092A016':'Less than $200,000',
-            # 'SE_T092B001':'Households',
-            # 'SE_T092B002':'More than $10,000',
-            # 'SE_T092B003':'More than $15,000',
-            # 'SE_T092B004':'More than $20,000',
-            # 'SE_T092B005':'More than $25,000',
-            # 'SE_T092B006':'More than $30,000',
-            # 'SE_T092B007':'More than $35,000',
-            # 'SE_T092B008':'More than $40,000',
-            # 'SE_T092B009':'More than $45,000',
-            # 'SE_T092B010':'More than $50,000',
-            # 'SE_T092B011':'More than $60,000',
-            # 'SE_T092B012':'More than $75,000',
-            # 'SE_T092B013':'More than $100,000',
-            # 'SE_T092B014':'More than $125,000',
-            # 'SE_T092B015':'More than $150,000',
-            # 'SE_T092B016':'More than $200,000',
-            #'SE_T093_001':'Median household income In 1999 Dollars',
-            #'SE_T096_001':'Average household income In 1999 Dollars',
-            #'SE_T162_001':'Owner-occupied housing units',
-            # 'SE_T162_002':'Value For All Owner-occupied housing units: Less than $20,000',
-            # 'SE_T162_003':'Value For All Owner-occupied housing units: $20,000 to $49,999',
-            # 'SE_T162_004':'Value For All Owner-occupied housing units: $50,000 to $99,999',
-            # 'SE_T162_005':'Value For All Owner-occupied housing units: $100,000 to $149,999',
-            # 'SE_T162_006':'Value For All Owner-occupied housing units: $150,000 to $299,999',
-            # 'SE_T162_007':'Value For All Owner-occupied housing units: $300,000 to $499,999',
-            # 'SE_T162_008':'Value For All Owner-occupied housing units: $500,000 to $749,999',
-            # 'SE_T162_009':'Value For All Owner-occupied housing units: $750,000 to $999,999',
-            # 'SE_T162_010':'Value For All Owner-occupied housing units: $1,000,000 or more',
-            }#'SE_T184_001':'T184. Population for whom poverty status is determined:',
-            #'SE_T184_002':'T184. Under .50',
-            #'SE_T184_003':'T184. .50 to .74',
-            #'SE_T184_004':'T184. .75 to .99',
-            #'SE_T184_005':'T184. 1.00 to 1.49',
-            #'SE_T184_006':'T184. 1.50 to 1.99',
-            #'SE_T184_007':'T184. 2.00 and over'}
+            'SE_T016_001': 'T16. Total Population',
+            'SE_T016_002': 'T16. White Alone',
+            'SE_T016_003': 'T16. Black or African American Alone',
+            'SE_T016_004': 'T16. American Indian and Alaska Native Alone',
+            'SE_T016_005': 'T16. Asian Alone',
+            'SE_T016_006': 'T16. Native Hawaiian and Other Pacific Islander Alone',
+            'SE_T016_007': 'T16. Some other race Alone',
+            'SE_T016_008': 'T16. Two or more races',
+            'SE_T017_001': 'T17. Total Population',
+            'SE_T017_002': 'T17. Not Hispanic or Latino',
+            # 'SE_T017_003': 'Not Hispanic or Latino: White Alone',
+            # 'SE_T017_004': 'Not Hispanic or Latino: Black or African American Alone',
+            # 'SE_T017_005': 'Not Hispanic or Latino: American Indian and Alaska Native Alone',
+            # 'SE_T017_006': 'Not Hispanic or Latino: Asian Alone',
+            # 'SE_T017_007': 'Not Hispanic or Latino: Native Hawaiian and Other Pacific Islander Alone',
+            # 'SE_T017_008': 'Not Hispanic or Latino: Some other race Alone',
+            # 'SE_T017_009': 'Not Hispanic or Latino: Two or more races',
+            'SE_T017_010': 'T17. Hispanic or Latino',
+            # 'SE_T017_011': 'Hispanic or Latino: White Alone',
+            # 'SE_T017_012': 'Hispanic or Latino: Black or African American Alone',
+            # 'SE_T017_013': 'Hispanic or Latino: American Indian and Alaska Native Alone',
+            # 'SE_T017_014': 'Hispanic or Latino: Asian Alone',
+            # 'SE_T017_015': 'Hispanic or Latino: Native Hawaiian and Other Pacific Islander Alone',
+            # 'SE_T017_016': 'Hispanic or Latino: Some other race Alone',
+            # 'SE_T017_017': 'Hispanic or Latino: Two or more races',
+            # 'SE_T092_001': 'Households',
+            # 'SE_T092_002': 'Household Income: Less than $10,000',
+            # 'SE_T092_003': 'Household Income: $10,000 to $14,999',
+            # 'SE_T092_004': 'Household Income: $15,000 to $19,999',
+            # 'SE_T092_005': 'Household Income: $20,000 to $24,999',
+            # 'SE_T092_006': 'Household Income: $25,000 to $29,999',
+            # 'SE_T092_007': 'Household Income: $30,000 to $34,999',
+            # 'SE_T092_008': 'Household Income: $35,000 to $39,999',
+            # 'SE_T092_009': 'Household Income: $40,000 to $44,999',
+            # 'SE_T092_010': 'Household Income: $45,000 to $49,999',
+            # 'SE_T092_011': 'Household Income: $50,000 to $59,999',
+            # 'SE_T092_012': 'Household Income: $60,000 to $74,999',
+            # 'SE_T092_013': 'Household Income: $75,000 to $99,999',
+            # 'SE_T092_014': 'Household Income: $100,000 to $124,999',
+            # 'SE_T092_015': 'Household Income: $125,000 to $149,999',
+            # 'SE_T092_016': 'Household Income: $150,000 to $199,999',
+            # 'SE_T092_017': 'Household Income: $200,000 or more',
+            # 'SE_T092A001': 'Households',
+            # 'SE_T092A002': 'Less than $10,000',
+            # 'SE_T092A003': 'Less than $15,000',
+            # 'SE_T092A004': 'Less than $20,000',
+            # 'SE_T092A005': 'Less than $25,000',
+            # 'SE_T092A006': 'Less than $30,000',
+            # 'SE_T092A007': 'Less than $35,000',
+            # 'SE_T092A008': 'Less than $40,000',
+            # 'SE_T092A009': 'Less than $45,000',
+            # 'SE_T092A010': 'Less than $50,000',
+            # 'SE_T092A011': 'Less than $60,000',
+            # 'SE_T092A012': 'Less than $75,000',
+            # 'SE_T092A013': 'Less than $100,000',
+            # 'SE_T092A014': 'Less than $125,000',
+            # 'SE_T092A015': 'Less than $150,000',
+            # 'SE_T092A016': 'Less than $200,000',
+            # 'SE_T092B001': 'Households',
+            # 'SE_T092B002': 'More than $10,000',
+            # 'SE_T092B003': 'More than $15,000',
+            # 'SE_T092B004': 'More than $20,000',
+            # 'SE_T092B005': 'More than $25,000',
+            # 'SE_T092B006': 'More than $30,000',
+            # 'SE_T092B007': 'More than $35,000',
+            # 'SE_T092B008': 'More than $40,000',
+            # 'SE_T092B009': 'More than $45,000',
+            # 'SE_T092B010': 'More than $50,000',
+            # 'SE_T092B011': 'More than $60,000',
+            # 'SE_T092B012': 'More than $75,000',
+            # 'SE_T092B013': 'More than $100,000',
+            # 'SE_T092B014': 'More than $125,000',
+            # 'SE_T092B015': 'More than $150,000',
+            # 'SE_T092B016': 'More than $200,000',
+            # 'SE_T093_001': 'Median household income In 1999 Dollars',
+            # 'SE_T096_001': 'Average household income In 1999 Dollars',
+            # 'SE_T162_001': 'Owner-occupied housing units',
+            # 'SE_T162_002': 'Value For All Owner-occupied housing units: Less than $20,000',
+            # 'SE_T162_003': 'Value For All Owner-occupied housing units: $20,000 to $49,999',
+            # 'SE_T162_004': 'Value For All Owner-occupied housing units: $50,000 to $99,999',
+            # 'SE_T162_005': 'Value For All Owner-occupied housing units: $100,000 to $149,999',
+            # 'SE_T162_006': 'Value For All Owner-occupied housing units: $150,000 to $299,999',
+            # 'SE_T162_007': 'Value For All Owner-occupied housing units: $300,000 to $499,999',
+            # 'SE_T162_008': 'Value For All Owner-occupied housing units: $500,000 to $749,999',
+            # 'SE_T162_009': 'Value For All Owner-occupied housing units: $750,000 to $999,999',
+            # 'SE_T162_010': 'Value For All Owner-occupied housing units: $1,000,000 or more',
+            }  # 'SE_T184_001': 'T184. Population for whom poverty status is determined:',
+            # 'SE_T184_002': 'T184. Under .50',
+            # 'SE_T184_003': 'T184. .50 to .74',
+            # 'SE_T184_004': 'T184. .75 to .99',
+            # 'SE_T184_005': 'T184. 1.00 to 1.49',
+            # 'SE_T184_006': 'T184. 1.50 to 1.99',
+            # 'SE_T184_007': 'T184. 2.00 and over'}
     try:
         dataset = Dataset.objects.get(name=str(year)+' Census Tracts')
         # temp = DataElement.objects.filter(datafield__dataset_id=dataset.id).aggregate(max=Max('id'),min=Min('id'))
@@ -545,26 +556,27 @@ def load_from_se(year=2000):
         try:
             df = Datafield.objects.filter(dataset_id=dataset.id).get(field_name=key)
         except:
-            df = DataField(dataset = dataset, field_name=key, field_en=flds[key], field_longname=flds[key], field_type=DataField.INTEGER)
+            df = DataField(dataset=dataset, field_name=key, field_en=flds[key], field_longname=flds[key], field_type=DataField.INTEGER)
             df.save()
         flds[key] = df
     for i in range(1,6):
-        filename = 'part'+str(i)+' tracts.csv'
-        filename = os.path.abspath(os.path.join(os.path.dirname(__file__), 'data/'+str(year)+'/'+filename))
-        openfile = open(filename,'rb')
+        filename = 'part' + str(i) + ' tracts.csv'
+        filename = os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                   'data/' + str(year) + '/' + filename))
+        openfile = open(filename, 'rb')
         csv_file = csv.DictReader(openfile)
         for line in csv_file:
             geo = '0'*(11-len(line['Geo_FIPS'])) + line['Geo_FIPS']
             try:
                 me = MapElement.objects.filter(dataset_id=dataset.id).get(remote_id=geo)
             except:
-                print 'GEOID:',line['Geo_FIPS'],'does not exist'
+                print 'GEOID:', line['Geo_FIPS'], 'does not exist'
                 continue
             current={}
             for key in line:
                 if key in flds:
                     try:
-                        de = DataElement(datafield=flds[key],mapelement=me,int_data=int(line[key]))
+                        de = DataElement(datafield=flds[key], mapelement=me, int_data=int(line[key]))
                     except:
                         continue
                     de.save()
@@ -575,4 +587,4 @@ def load_from_se(year=2000):
                         de.save()
                     except:
                         pass
-        print 'file',filename,'processed'
+        print 'file', filename, 'processed'
