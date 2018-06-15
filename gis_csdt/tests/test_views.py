@@ -56,12 +56,12 @@ class SMSCreateData(LiveServerTestCase):
         sensor.save()
         phNum = PhoneNumber.objects.create(phone_number=11111111111,user=self.user)
         phNum.save()
-        data = [1,1,0,128,129,300,10001]
+        data = [1, 0, 128, 129, 300, 10001]
         data[0] = sensor.id
         string = DataToGSM7(data)
         postData = {'Body': string.encode('utf-8'), 'From': phNum.phone_number}
         response = self.client.post('/api-SMS/', urllib.urlencode(postData), content_type='application/x-www-form-urlencoded')
-        self.assertEqual(DataPoint.objects.get(pk=8).value, 10001)
+        self.assertEqual(DataPoint.objects.get(pk=6).value, 10001)
 
 class TestAddMapPointAPI(TestCase):
     def setUp(self):

@@ -618,7 +618,7 @@ class SensorSerializer(serializers.ModelSerializer):
                              model_number=attrs['model_number'],
                              metric=attrs['metric'],
                              accuracy=attrs['accuracy'],
-                             user_id=thisUser)
+                             user=thisUser)
         sensorModel.save()
         return sensorModel
 

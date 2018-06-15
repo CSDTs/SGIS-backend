@@ -207,10 +207,10 @@ class TestSensorSerializer(TestCase):
 		self.user = User.objects.get(username='test')
 		request.user = self.user
 
-		attrs = {'name': 'sensor1', 'supplier': 'sss', 'model_number': 123, 'metric': 'm', 'accuracy': 0.001}
+		attrs = {'name': 'sensor2', 'supplier': 'sss', 'model_number': 123, 'metric': 'm', 'accuracy': 0.001}
 		serializer = SensorSerializer(context={'request': request})
 		sensor = serializer.create(attrs)
-		self.assertEqual(sensor.name, 'sensor1')
+		self.assertEqual(sensor.name, 'sensor2')
 		self.assertEqual(sensor.accuracy, 0.001)
 		self.assertEqual(sensor.model_number, 123)
 
