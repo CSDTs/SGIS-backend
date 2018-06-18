@@ -117,5 +117,60 @@
   },
   "model": "gis_csdt.sensor",
   "pk": 1
+},
+{
+  "fields": {
+    "dataset": 1,
+    "field_en": "sdfks"
+  },
+  "model": "gis_csdt.datafield",
+  "pk": 1
+},
+{
+  "fields": {
+    "datafield": 1,
+    "mapelement": 1,
+    "int_data": 2
+  },
+  "model": "gis_csdt.dataelement",
+  "pk": 1
+},
+{
+  "fields": {
+    "dataset": 1,
+    "tag": "a",
+    "approved": true,
+    "count": 2
+  },
+  "model": "gis_csdt.tag",
+  "pk": 1
+},
+{
+  "fields": {
+    "dataset": 1,
+    "tag": "b",
+    "approved": true,
+    "count": 1
+  },
+  "model": "gis_csdt.tag",
+  "pk": 2
+},
+{
+  "fields": {
+    "dataset": 2,
+    "tag": "c",
+    "approved": false,
+    "count": 0
+  },
+  "model": "gis_csdt.tag",
+  "pk": 3
+},
+{
+  "fields": {
+    "tag": 1,
+    "mapelement": 1
+  },
+  "model": "gis_csdt.tagindiv",
+  "pk": 1
 }
 ]
