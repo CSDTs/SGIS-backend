@@ -17,16 +17,22 @@ from django.db import IntegrityError
 from django.db.models import Max
 from django.core.exceptions import ObjectDoesNotExist
 from settings import DEBUG
+import re
+import string
+
 
 def run(verbose=True, year=2010, starting_state=1):
-
     yn = ''
-    #https://docs.djangoproject.com/en/1.7/ref/contrib/gis/layermapping/
+    # https://docs.djangoproject.com/en/1.7/ref/contrib/gis/layermapping/
     while DEBUG and yn != 'y':
-        yn = raw_input('This process can be memory-intensive if DEBUG = True in settings as this logs all SQL. DEBUG is currently True. Please set this to False if you are experiencing issues. Continue (y/n)?').lower().strip()
+        yn = raw_input('This process can be memory-intensive if'
+                       'DEBUG = True in settings as this logs all SQL. '
+                       'DEBUG is currently True. Please set this to False'
+                       'if you are experiencing issues. Continue (y/n)?') \
+                       .lower().strip()
         if yn == 'n':
             return
-    dataset_qs = Dataset.objects.filter(name__exact=str(year) + ' Census Tracts')
+    dataset_qs = Dataset.objects.filter(name__exact=str(year)+' Census Tracts')
     if len(dataset_qs) > 0:
         ds = dataset_qs[0]
         ds.cached = datetime.utcnow().replace(tzinfo=utc),
@@ -46,7 +52,6 @@ def run(verbose=True, year=2010, starting_state=1):
         elif year == 2000:
             ds.remote_id_field = 'CTIDFP00'
         ds.save()
-
 
     tract_mapping = {
         'remote_id': ds.remote_id_field,
@@ -74,27 +79,33 @@ def run(verbose=True, year=2010, starting_state=1):
         except:
             pass
 
-    for i in [format(x,'#02d') for x in range(starting_state,100)]:
-        short_name = 'tl_2010_'+i+'_tract'+str(year)[-2:]
-        tract_shp = os.path.abspath(os.path.join(os.path.dirname(__file__), 'data/'+short_name))
-        if not os.path.isfile(tract_shp+'.shp') or not os.path.isfile(tract_shp+'.shx') or not os.path.isfile(tract_shp+'.shp.xml') or not os.path.isfile(tract_shp+'.prj') or not os.path.isfile(tract_shp+'.dbf'):
+    for i in [format(x, '#02d') for x in range(starting_state, 100)]:
+        short_name = 'tl_2010_' + i + '_tract' + str(year)[-2:]
+        tract_shp = os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                    'data/'+short_name))
+        if (not os.path.isfile(tract_shp+'.shp')
+            or not os.path.isfile(tract_shp+'.shx')
+            or not os.path.isfile(tract_shp+'.shp.xml')
+            or not os.path.isfile(tract_shp+'.prj')
+            or not os.path.isfile(tract_shp+'.dbf')):
+
             if short_name + '.zip' not in files:
                 continue
             if verbose:
                 print short_name + '.shp does not exist locally.\n\tDownloading from Census FTP...'
             try:
-                #download the file
+                # download the file
                 local_file = open(tract_shp+'.zip', 'wb')
                 ftp.retrbinary('RETR '+short_name+'.zip', local_file.write)
                 local_file.close()
-                #open the zip
+                # open the zip
                 zipped = zipfile.ZipFile(tract_shp+'.zip')
-                for suffix in ['.shp','.prj','.dbf','.shp.xml','.shx']:
+                for suffix in ['.shp', '.prj', '.dbf', '.shp.xml', '.shx']:
                     zipped.extract(short_name+suffix, os.path.abspath(os.path.join(os.path.dirname(__file__), 'data')))
             except Exception as inst:
                 if verbose:
                     print '\tException:', inst
-                    print '\t'+short_name+'.shp did not download or unzip correctly. Moving on...'
+                    print '\t'+short_name + '.shp did not download or unzip correctly. Moving on...'
                 continue
         tract_shp = tract_shp + '.shp'
         if verbose:
@@ -103,27 +114,28 @@ def run(verbose=True, year=2010, starting_state=1):
 
         while True:
             try:
-                lm.save(strict=True, verbose=False)#verbose)
+                lm.save(strict=True, verbose=False)  # verbose)
                 break
-            #exception part is untested, error didn't happen again
+            # exception part is untested, error didn't happen again
             except Exception as inst:
                 yn = ''
-                while yn not in ['n','y']:
-                    yn = raw_input('Error saving: '+ str(inst) + '\nContinue (y/n)?').strip().lower()
+                while yn not in ['n', 'y']:
+                    yn = raw_input('Error saving: ' + str(inst) + '\nContinue (y/n)?').strip().lower()
                 if yn == 'y':
                     MapPolygon.objects.filter(dataset_id__isnull=True).filter(remote_id__startswith=i).delete()
                 else:
                     break
         if verbose:
             print '\tLayer mapping done.'
-        MapPolygon.objects.filter(dataset = None).update(dataset = ds)
+        MapPolygon.objects.filter(dataset=None).update(dataset=ds)
         if verbose:
             print '\tLayer associated with dataset.'
     ftp.quit()
 
     if verbose:
         print 'All shapefiles added.'
-    
+
+
 '''def temp_switch():
     for poly in MapPolygon.objects.all():
         lat = poly.field1
@@ -134,34 +146,36 @@ def run(verbose=True, year=2010, starting_state=1):
         poly.lon = lon
         poly.save()'''
 
+
 def recount():
     all_tags = Tag.objects.all()
     for tag in all_tags:
         tag.recount(save=True)
 
-def get_income(year = 2010, ds_id = 0, to_process=None):
+
+def get_income(year=2010, ds_id=0, to_process=None):
     try:
-        #check the format
+        # check the format
         if to_process is None:
             raise
         for v in to_process:
             if 'variable' not in v or 'variable_type' not in v:
                 raise
     except:
-        #http://www.census.gov/data/developers/data-sets/acs-survey-5-year-data.html
-        #http://api.census.gov/data/2010/acs5/variables.html
+        # http://www.census.gov/data/developers/data-sets/acs-survey-5-year-data.html
+        # http://api.census.gov/data/2010/acs5/variables.html
         #              median household income                                     Total population
-        to_process = [{'variable':'B19013_001E', 'variable_type':DataField.INTEGER}, 
-            {'variable':'B01003_001E', 'variable_type':DataField.INTEGER}]
+        to_process = [{'variable': 'B19013_001E', 'variable_type': DataField.INTEGER},
+                      {'variable': 'B01003_001E', 'variable_type': DataField.INTEGER}]
         '''to_process = [{'variable':'B02001_001E', 'variable_type':DataField.INTEGER},
-                                    {'variable':'B02001_002E', 'variable_type':DataField.INTEGER}, 
-                                    {'variable':'B02001_003E', 'variable_type':DataField.INTEGER}, 
-                                    {'variable':'B02001_004E', 'variable_type':DataField.INTEGER}, 
-                                    {'variable':'B02001_005E', 'variable_type':DataField.INTEGER}, 
-                                    {'variable':'B02001_006E', 'variable_type':DataField.INTEGER}, 
-                                    {'variable':'B02001_007E', 'variable_type':DataField.INTEGER}, 
-                                    {'variable':'B02001_008E', 'variable_type':DataField.INTEGER}, 
-                                    {'variable':'B02001_009E', 'variable_type':DataField.INTEGER}, 
+                                    {'variable':'B02001_002E', 'variable_type':DataField.INTEGER},
+                                    {'variable':'B02001_003E', 'variable_type':DataField.INTEGER},
+                                    {'variable':'B02001_004E', 'variable_type':DataField.INTEGER},
+                                    {'variable':'B02001_005E', 'variable_type':DataField.INTEGER},
+                                    {'variable':'B02001_006E', 'variable_type':DataField.INTEGER},
+                                    {'variable':'B02001_007E', 'variable_type':DataField.INTEGER},
+                                    {'variable':'B02001_008E', 'variable_type':DataField.INTEGER},
+                                    {'variable':'B02001_009E', 'variable_type':DataField.INTEGER},
                                     {'variable':'B02001_010E', 'variable_type':DataField.INTEGER},
                                     {'variable':'B17001_001E', 'variable_type':DataField.INTEGER},
                                     {'variable':'B17001_002E', 'variable_type':DataField.INTEGER}
@@ -173,10 +187,10 @@ def get_income(year = 2010, ds_id = 0, to_process=None):
         print 'No Census dataset exists. Aborting'
         return
     elif len(ds) > 1:
-        if ds_id>0:
+        if ds_id > 0:
             ds = [ds.get(pk=ds_id)]
         else:
-            print 'More than one 2010 Census dataset exists. Using ID %d' %(ds[0].id)
+            print 'More than one 2010 Census dataset exists. Using ID %d' % (ds[0].id)
 
     dfs = []
     get = ''
@@ -184,32 +198,35 @@ def get_income(year = 2010, ds_id = 0, to_process=None):
         try:
             dfs.append(DataField.objects.filter(dataset_id__exact=ds[0].id).get(field_name=item['variable']))
         except:
-            request = 'http://api.census.gov/data/2010/acs5/variables/%s.json' %(item['variable'])
+            request = 'http://api.census.gov/data/2010/acs5/variables/%s.json' % (item['variable'])
             data = json.loads(urllib.urlopen(request).read())
-            dfs.append(DataField(dataset = ds[0], field_en = data['label'], field_longname = data['concept'][7:].strip(), field_name = item['variable'], field_type = item['variable_type']))
-            if len(dfs[-1].field_en)>DataField._meta.get_field('field_en').max_length:
+            dfs.append(DataField(dataset=ds[0], field_en=data['label'],
+                       field_longname=data['concept'][7:].strip(),
+                       field_name=item['variable'],
+                       field_type=item['variable_type']))
+            if len(dfs[-1].field_en) > DataField._meta.get_field('field_en').max_length:
                 dfs[-1].field_en = dfs[-1].field_en[:DataField._meta.get_field('field_en').max_length]
-            if len(dfs[-1].field_longname)>DataField._meta.get_field('field_longname').max_length:
+            if len(dfs[-1].field_longname) > DataField._meta.get_field('field_longname').max_length:
                 dfs[-1].field_longname = dfs[-1].field_longname[:DataField._meta.get_field('field_longname').max_length]
             dfs[-1].save()
         get = get + ',' + item['variable']
     get = get.strip(', ')
 
     counties = json.loads(urllib.urlopen('http://api.census.gov/data/2010/acs5?key='+key+'&get=NAME&for=county:*').read())
-    #i could technically call this once, but it's just too much data at once so i'm splitting by state
+    # i could technically call this once, but it's just too much data at once so i'm splitting by state
     for county in counties[1:]:
-        #get the data
-        request = 'http://api.census.gov/data/2010/acs5?key=%s&get=%s,NAME&for=tract:*&in=state:%s,county:%s' %(key,get,county[1],county[2])
+        # get the data
+        request = 'http://api.census.gov/data/2010/acs5?key=%s&get=%s,NAME&for=tract:*&in=state:%s,county:%s' % (key, get, county[1], county[2])
         try:
             data = json.loads(urllib.urlopen(request).read())
         except:
             continue
         converted = {}
-        #locations of basic data in each list
-        #format like:
-        #[["B19013_001E","B01003_001E","NAME","state","county","tract"],
-        #["32333","2308","Census Tract 1, Albany County, New York","36","001","000100"],
-        #...]
+        # locations of basic data in each list
+        # format like:
+        # [["B19013_001E","B01003_001E","NAME","state","county","tract"],
+        # ["32333","2308","Census Tract 1, Albany County, New York","36","001","000100"],
+        # ...]
         for col in range(len(data[0])):
             if data[0][col] == 'NAME':
                 n = col
@@ -225,36 +242,37 @@ def get_income(year = 2010, ds_id = 0, to_process=None):
             for num in range(n):
                 if d[num] is not None:
                     converted[census_tract][data[0][num]] = d[num].strip()
-        #converted now looks like
+        # converted now looks like
         # {"36001000100": {"B19013_001E": "32333","B01003_001E": "2308"},
         #  "36001000200": {"B19013_001E": "25354","B01003_001E": "5506"},...}
-        for poly in MapPolygon.objects.filter(dataset = ds[0]).filter(remote_id__startswith=county[1]+county[2]):
+        for poly in MapPolygon.objects.filter(dataset=ds[0]).filter(remote_id__startswith=county[1]+county[2]):
             if poly.remote_id in converted:
                 recursive_link = {}
                 for df in dfs:
                     if df.field_name in converted[poly.remote_id]:
-                        de = DataElement(datafield = df,mapelement = poly)
+                        de = DataElement(datafield=df, mapelement=poly)
                         if df.field_type == DataField.INTEGER:
                             try:
                                 de.int_data = int(converted[poly.remote_id][df.field_name])
                             except:
-                                print 'integer conversion failed for census tract %s, field %s' %(poly.remote_id, df.field_name)
+                                print 'integer conversion failed for census tract %s, field %s' % (poly.remote_id, df.field_name)
                                 print 'value:', converted[poly.remote_id][df.field_name]
                         elif df.field_type == DataField.FLOAT:
                             try:
                                 de.float_data = float(converted[poly.remote_id][df.field_name])
                             except:
-                                print 'float conversion failed for census tract %s, field %s' %(poly.remote_id, df.field_name)
+                                print 'float conversion failed for census tract %s, field %s' % (poly.remote_id, df.field_name)
                         elif df.field_type == DataField.STRING:
                             if len(converted[poly.remote_id][df.field_name]) > 200:
                                 print 'string overload - string truncated as shown:'
-                                print '%s[%s]' %(converted[poly.remote_id][df.field_name][:200],converted[poly.remote_id][df.field_name][200:])
+                                print '%s[%s]' % (converted[poly.remote_id][df.field_name][:200], 
+                                                  converted[poly.remote_id][df.field_name][200:])
                                 de.char_data = converted[poly.remote_id][df.field_name][:200]
                             else:
                                 de.char_data = converted[poly.remote_id][df.field_name]
                         if df.field_name[-4:] == '001E':
                             de.save()
-                            recursive_link[df.field_name[:-4]]=de
+                            recursive_link[df.field_name[:-4]] = de
                         try:
                             de.denominator = recursive_link[df.field_name[:-4]]
                         except:
@@ -262,7 +280,9 @@ def get_income(year = 2010, ds_id = 0, to_process=None):
                         de.save()
 
             else:
-                print 'ERROR: Tract #%s is not in the dataset' %(poly.remote_id)
+                print 'ERROR: Tract #%s is not in the dataset' % (poly.remote_id)
+
+
 def add_denominator():
     for df_denom in DataField.objects.filter(field_name__contains='_001E'):
         for df in DataField.objects.filter(field_name__contains=df_denom.field_name[:-4]).filter(dataset_id__exact=df_denom.dataset_id):
@@ -272,17 +292,21 @@ def add_denominator():
                     de.save()
                 except:
                     continue
+
+
 def del_all():
     DataField.objects.all().delete()
 
-import re, string
+
 def tag_by_keyword(keyword='pizza', dataset=2, tag='pizza'):
-    tag_helper([{'keyword':keyword}],'keyword',dataset,tag)
+    tag_helper([{'keyword': keyword}], 'keyword', dataset, tag)
+
 
 def tag_by_name(filename='fastfood.json', name_field='Company', dataset=2, tag='fast food'):
     data = json.loads(open(os.path.abspath(os.path.join(os.path.dirname(__file__), 'data/'+filename))).read())
     data = data['data']
     tag_helper(data, name_field, dataset, tag)
+
 
 def tag_helper(data, name_field, dataset, tag):
     mps = MapPoint.objects.filter(dataset_id=dataset)
@@ -308,9 +332,9 @@ def tag_helper(data, name_field, dataset, tag):
             try:
                 t.save()
             except IntegrityError:
-                #violate unique restraint so just don't save it
+                # violate unique restraint so just don't save it
                 pass
-            
+
 
 def add_point_to_mp(dataset=None):
     mps = MapPoint.objects.filter(point__isnull=True).exclude(lat__isnull=True).exclude(lon__isnull=True)
@@ -318,10 +342,11 @@ def add_point_to_mp(dataset=None):
         mps = mps.filter(dataset_id__exact=dataset)
     for mp in mps:
         try:
-            mp.point = Point(float(mp.lon),float(mp.lat))
+            mp.point = Point(float(mp.lon), float(mp.lat))
             mp.save()
         except:
             pass
+
 
 def hazardous_waste(year=2011, verbose=True):
     try:
@@ -362,17 +387,17 @@ def hazardous_waste(year=2011, verbose=True):
         path = os.path.abspath(os.path.join(os.path.dirname(__file__), 'data/ej/'+str(year)+'/'+short_name))
         if not os.path.isfile(path):
             if verbose:
-                print 'No file %s exists.' %(short_name)
+                print 'No file %s exists.' % (short_name)
             short_name = str(year)+' '+state+'.CSV'
             path = os.path.abspath(os.path.join(os.path.dirname(__file__), 'data/ej/'+str(year)+'/'+short_name))
             if not os.path.isfile(path):
                 if verbose:
-                    print 'No file %s exists.' %(short_name)
+                    print 'No file %s exists.' % (short_name)
                 continue
         if verbose:
-            print 'Opening file %s' %(short_name)
-        readfile = csv.reader(open(path,'rb'))
-        #verify
+            print 'Opening file %s' % (short_name)
+        readfile = csv.reader(open(path, 'rb'))
+        # verify
         row = readfile.next()
         locs = {}
         for i in range(len(row)):
@@ -401,7 +426,7 @@ def hazardous_waste(year=2011, verbose=True):
         for row in readfile:
             kwargs = {'dataset': dataset}
             for key in locs:
-                if key in ['lat','lon']:
+                if key in ['lat', 'lon']:
                     try:
                         kwargs[key] = float(row[locs[key]])
                     except:
@@ -414,24 +439,25 @@ def hazardous_waste(year=2011, verbose=True):
                 kwargs['point'] = Point(kwargs['lon'], kwargs['lat'])
             except:
                 if verbose:
-                    print '\tInvalid lat/long for row: %s' %(row)
-                    print '\tLat: %f Lon: %f' %(kwargs['lat'], kwargs['lon']) 
+                    print '\tInvalid lat/long for row: %s' % (row)
+                    print '\tLat: %f Lon: %f' % (kwargs['lat'], kwargs['lon'])
                 continue
             mp = MapPoint(**kwargs)
             mp.save()
         if verbose:
-            print 'File "%s" done processing' %(short_name)
+            print 'File "%s" done processing' % (short_name)
+
 
 def load_from_se(year=2000):
-    flds = {'SE_T001_001':'T1. Total Population',
-            #'SE_T014_001':'Total Population',
-            #'SE_T014_002':'White Alone',
-            #'SE_T014_003':'Black or African American Alone',
-            #'SE_T014_004':'American Indian and Alaska Native Alone',
-            #'SE_T014_005':'Asian Alone',
-            #'SE_T014_006':'Native Hawaiian and Other Pacific Islander Alone',
-            #'SE_T014_007':'Some other race Alone',
-            #'SE_T014_008':'Two or more races',
+    flds = {'SE_T001_001': 'T1. Total Population',
+            # 'SE_T014_001':'Total Population',
+            # 'SE_T014_002':'White Alone',
+            # 'SE_T014_003':'Black or African American Alone',
+            # 'SE_T014_004':'American Indian and Alaska Native Alone',
+            # 'SE_T014_005':'Asian Alone',
+            # 'SE_T014_006':'Native Hawaiian and Other Pacific Islander Alone',
+            # 'SE_T014_007':'Some other race Alone',
+            # 'SE_T014_008':'Two or more races',
             # 'SE_T015_001':'Total Population',
             # 'SE_T015_002':'Not Hispanic or Latino',
             # 'SE_T015_003':'Not Hispanic or Latino: White Alone',
@@ -535,13 +561,15 @@ def load_from_se(year=2000):
             # 'SE_T162_008': 'Value For All Owner-occupied housing units: $500,000 to $749,999',
             # 'SE_T162_009': 'Value For All Owner-occupied housing units: $750,000 to $999,999',
             # 'SE_T162_010': 'Value For All Owner-occupied housing units: $1,000,000 or more',
-            }  # 'SE_T184_001': 'T184. Population for whom poverty status is determined:',
+            # 'SE_T184_001': 'T184. Population for whom poverty status is determined:',
             # 'SE_T184_002': 'T184. Under .50',
             # 'SE_T184_003': 'T184. .50 to .74',
             # 'SE_T184_004': 'T184. .75 to .99',
             # 'SE_T184_005': 'T184. 1.00 to 1.49',
             # 'SE_T184_006': 'T184. 1.50 to 1.99',
             # 'SE_T184_007': 'T184. 2.00 and over'}
+            }
+
     try:
         dataset = Dataset.objects.get(name=str(year)+' Census Tracts')
         # temp = DataElement.objects.filter(datafield__dataset_id=dataset.id).aggregate(max=Max('id'),min=Min('id'))
@@ -550,16 +578,18 @@ def load_from_se(year=2000):
         # print 'dataelements deleted'
     except Exception as e:
         print e
-        print 'Dataset "'+str(year),'Census Tracts" does not exist'
+        print 'Dataset "'+str(year), 'Census Tracts" does not exist'
         return
     for key in flds:
         try:
-            df = Datafield.objects.filter(dataset_id=dataset.id).get(field_name=key)
+            df = DataField.objects.filter(dataset_id=dataset.id).get(field_name=key)
         except:
-            df = DataField(dataset=dataset, field_name=key, field_en=flds[key], field_longname=flds[key], field_type=DataField.INTEGER)
+            df = DataField(dataset=dataset, field_name=key,
+                           field_en=flds[key], field_longname=flds[key],
+                           field_type=DataField.INTEGER)
             df.save()
         flds[key] = df
-    for i in range(1,6):
+    for i in range(1, 6):
         filename = 'part' + str(i) + ' tracts.csv'
         filename = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                    'data/' + str(year) + '/' + filename))
@@ -572,7 +602,7 @@ def load_from_se(year=2000):
             except:
                 print 'GEOID:', line['Geo_FIPS'], 'does not exist'
                 continue
-            current={}
+            current = {}
             for key in line:
                 if key in flds:
                     try:
@@ -580,7 +610,7 @@ def load_from_se(year=2000):
                     except:
                         continue
                     de.save()
-                    if key[-4:]=='_001':
+                    if key[-4:] == '_001':
                         current[key[:-4]] = de
                     try:
                         de.denominator = current[key[:-4]]

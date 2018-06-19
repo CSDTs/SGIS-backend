@@ -86,7 +86,8 @@ def filter_request(parameters, model_type):
             bb[key] = r
 
     if 'max_lat' in bb and 'min_lat' in bb and 'max_lon' in bb and 'min_lon' in bb:
-        geom = Polygon.from_bbox((bb['min_lon'], bb['min_lat'], bb['max_lon'], bb['max_lat']))
+        geom = Polygon.from_bbox((bb['min_lon'], bb['min_lat'],
+                                  bb['max_lon'], bb['max_lat']))
         if model_type == 'mappoint':
             queryset = queryset.filter(point__within=geom)
         elif model_type == 'mappolygon':
@@ -107,10 +108,12 @@ def filter_request(parameters, model_type):
             temp[1] = float(temp[1])
             center = Point(temp[0], temp[1])
         except:
-            return HttpResponseBadRequest('Invalid center. Format is: center=lon,lat')
+            return HttpResponseBadRequest('Invalid center. '
+                                          'Format is: center=lon,lat')
         queryset = queryset.filter(point__distance_lte=(center, Distance(mi=radius)))
     elif 'radius' in parameters or 'center' in parameters:
-        return HttpResponseBadRequest('If a center or radius is specified, the other must also be specified.')
+        return HttpResponseBadRequest('If a center or radius is specified, '
+                                      'the other must also be specified.')
 
     return queryset.distinct()
 
@@ -131,7 +134,8 @@ def neighboring_points(point, queryset, distance):
 def unite_radius_bubbles(points, distances):
     geometry = {}
     for d in distances:
-        geometry[d] = circle_as_polygon(lat=points[0].point.y, lon=points[0].point.x, distance=d)
+        geometry[d] = circle_as_polygon(lat=points[0].point.y,
+                                        lon=points[0].point.x, distance=d)
         for p in points[1:]:
             geometry[d] = geometry[d].union(circle_as_polygon(lat=p.point.y,
                                                               lon=p.point.x,

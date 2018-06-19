@@ -34,7 +34,8 @@ def circle_as_polygon(lat, lon, n=12, distance=Distance(km=1)):
     points = []
     # build points, loop around circle
     for angle in [360.*i/n for i in range(0, n)]:
-        curr = VincentyDistance(kilometers=distance.km).destination(gpPoint(lat, lon), angle)
+        curr = VincentyDistance(kilometers=distance.km) \
+               .destination(gpPoint(lat, lon), angle)
         points.append((curr.longitude, curr.latitude))
     # loop back to the first point for the n+1th point in the list
     points.append(points[0])
