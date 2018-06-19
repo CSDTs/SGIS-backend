@@ -20,8 +20,9 @@ class Location(models.Model):
                                     blank=True)
 
     def __unicode__(self):
-        return self.street_field + ", " + self.county_field + ", " + self.city_field \
-               + " " + self.state_field + '\n' + self.zipcode_field
+        return self.street_field + ", " + self.county_field + ", " \
+               + self.city_field + " " + self.state_field \
+               + '\n' + self.zipcode_field
 
 
 class GeoCoordinates(models.Model):
@@ -29,7 +30,7 @@ class GeoCoordinates(models.Model):
     lon_field = models.CharField(max_length=50, default='longitude',
                                  blank=True)
 
-    def __unicode__(self): 
+    def __unicode__(self):
         return "latitude: " + self.lat_field + ", longitude: " + self.lon_field
 
 
@@ -242,14 +243,14 @@ class MapElement(models.Model):
         try:
             self.mappolygon
             return self.id
-        except:
+        except Exception:
             return None
 
     def point_id(self):
         try:
             self.mappoint
             return self.id
-        except:
+        except Exception:
             return None
 
     # class Meta:
@@ -292,13 +293,15 @@ class MapPoint(MapElement):
                 self.lon = decimal.Decimal(
                            j['results'][0]['geometry']['location']['lng'])
                 self.geocoded = True
-            except:
+            except Exception:
                 return {'status': 'conversion_error', 'request': request}
         # this error type means the request can be retried
         elif j['status'] == 'UNKNOWN_ERROR' and unknown_count < 5:
             return self.geocode(unknown_count + 1)
         # want to debug other errors
-        assert j['status'] == 'OK' or j['status'] == 'OVER_QUERY_LIMIT' or j['status'] == 'ZERO_RESULTS'  
+        assert (j['status'] == 'OK'
+                or j['status'] == 'OVER_QUERY_LIMIT'
+                or j['status'] == 'ZERO_RESULTS')
         if j['status'] == 'OVER_QUERY_LIMIT':
             print 'Hit Google Maps API daily query limit'
         return {'status': j['status'], 'request': request}
