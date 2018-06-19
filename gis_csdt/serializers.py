@@ -58,15 +58,18 @@ class NewTagSerializer(serializers.ModelSerializer):
 
     def validate_tag(self, value):
         if ',' in value or type(value) is list:
-            raise serializers.ValidationError('No more than one tag should be POSTed at once. Commas are not allowed in tags.')
+            raise serializers.ValidationError('No more than one tag should '
+                                              'be POSTed at once. Commas '
+                                              'are not allowed in tags.')
         return value.strip().lower()
 
     def create(self, validated_data):
         me = validated_data.pop('mapelement_id')
         try:
             me = MapElement.objects.get(id=me)
-        except:
-            raise serializers.ValidationError('No MapElement found with ID', str(me))
+        except Exception:
+            raise serializers.ValidationError('No MapElement found with ID',
+                                              str(me))
         tag_txt = validated_data.pop('tag')
         tags = Tag.objects.filter(dataset=me.dataset, tag=tag_txt)
 
@@ -151,15 +154,18 @@ class MapPointSerializer(serializers.HyperlinkedModelSerializer):
 
     def get_tags(self, mappoint):
         # build nested distinct list
-        return Tag.objects.filter(approved=True, tagindiv__mapelement=mappoint) \
-               .distinct('id', 'tag').values_list('tag', flat=True)
+        return Tag.objects.filter(approved=True,
+                                  tagindiv__mapelement=mappoint) \
+                          .distinct('id', 'tag') \
+                          .values_list('tag', flat=True)
 
     class Meta:
         # id_field = False
         # geo_field = 'point'
         model = MapPoint
         fields = ('dataset', 'id', 'name', 'latitude', 'longitude', 'street',
-                  'city', 'state', 'zipcode', 'county', 'field1', 'field2', 'field3', 'tags')
+                  'city', 'state', 'zipcode', 'county', 'field1',
+                  'field2', 'field3', 'tags')
 
 
 class TestSerializer(gis_serializers.GeoFeatureModelSerializer):
@@ -218,8 +224,12 @@ class TestSerializer(gis_serializers.GeoFeatureModelSerializer):
 
 
 class MapPolygonSerializer(gis_serializers.GeoFeatureModelSerializer):
-    latitude = serializers.DecimalField(source='mappolygon.lat', max_digits=18, decimal_places=15)
-    longitude = serializers.DecimalField(source='mappolygon.lon', max_digits=18, decimal_places=15)
+    latitude = serializers.DecimalField(source='mappolygon.lat',
+                                        max_digits=18,
+                                        decimal_places=15)
+    longitude = serializers.DecimalField(source='mappolygon.lon',
+                                         max_digits=18,
+                                         decimal_places=15)
     field1 = serializers.CharField(source='mappolygon.field1')
     field2 = serializers.CharField(source='mappolygon.field2')
 
@@ -255,7 +265,7 @@ class CountPointsSerializer(serializers.ModelSerializer):
         for key in ['max_lat', 'min_lat', 'max_lon', 'min_lon', 'state']:
             try:
                 del params[key]
-            except:
+            except Exception:
                 pass  # no big deal
 
         c = {mappolygon.dataset.names.field1_en: mappolygon.mappolygon.field1,
@@ -303,7 +313,7 @@ class CountPointsSerializer(serializers.ModelSerializer):
                     tag_obj = Tag.objects.get(num)
                     all_tag_filter = all_tag_filter.filter(tagindiv__tag=tag_obj)
                     c[tag_obj.tag + " count"] = points.filter(tagindiv__tag=tag_obj).count()
-                except:
+                except Exception:
                     all_tag_filter = all_tag_filter.filter(tagindiv__tag__tag=tag)
                     c[tag + " count"] = points.filter(tagindiv__tag__tag=tag).count()
             if len(tags) > 1:
@@ -401,11 +411,10 @@ class AnalyzeAreaSerializer(serializers.ModelSerializer):
                        .filter(mpoly__covers=boundary[dist])
                        .exclude(remote_id__in=already_accounted)
                        .values_list('remote_id', flat=True))
-            maybe_polys = MapPolygon.objects \
-                          .filter(dataset_id__exact=dataset_id) \
-                          .exclude(mpoly__covers=boundary[dist]) \
-                          .exclude(remote_id__in=already_accounted) \
-                          .filter(mpoly__intersects=boundary[dist])
+            maybe_polys = MapPolygon.objects.filter(dataset_id__exact=dataset_id) \
+                                            .exclude(mpoly__covers=boundary[dist]) \
+                                            .exclude(remote_id__in=already_accounted) \
+                                            .filter(mpoly__intersects=boundary[dist])
             for polygon in maybe_polys:
                 if polygon.mpoly.intersection(boundary[dist]).area > .5 * polygon.mpoly.area:
                     poly.add(polygon.remote_id)
@@ -482,8 +491,8 @@ class AnalyzeAreaSerializer(serializers.ModelSerializer):
             dist_objs.append(Distance(**kwargs))
 
         all_points = neighboring_points(mappoint,
-                     MapPoint.objects.filter(dataset=mappoint.dataset_id),
-                                             dist_objs[-1])
+                                        MapPoint.objects.filter(dataset=mappoint.dataset_id),
+                                        dist_objs[-1])
         # print all_points
 
         # variables = ['Total Population','Area (km2)','Total (Race)', 'White Only', 'African American', 'Hispanic','Asian/Pacific Islander', 'Native American','Total (Poverty)','below 1.00', 'weighted mean of median household income','Mean Housing Value']
@@ -523,11 +532,10 @@ class AnalyzeAreaSerializer(serializers.ModelSerializer):
                        .filter(mpoly__covers=boundary[dist])
                        .exclude(remote_id__in=already_accounted)
                        .values_list('remote_id', flat=True))
-            maybe_polys = MapPolygon.objects \
-                          .filter(dataset_id__exact=dataset_id) \
-                          .exclude(mpoly__covers=boundary[dist]) \
-                          .exclude(remote_id__in=already_accounted) \
-                          .filter(mpoly__intersects=boundary[dist])
+            maybe_polys = MapPolygon.objects.filter(dataset_id__exact=dataset_id) \
+                                            .exclude(mpoly__covers=boundary[dist]) \
+                                            .exclude(remote_id__in=already_accounted) \
+                                            .filter(mpoly__intersects=boundary[dist])
             for polygon in maybe_polys:
                 if polygon.mpoly.intersection(boundary[dist]).area > .5 * polygon.mpoly.area:
                     poly.add(polygon.remote_id)
@@ -578,7 +586,7 @@ class AnalyzeAreaSerializer(serializers.ModelSerializer):
                                 for v in variables:
                                     try:
                                         data_sums[dist_str][v]['sum'] = data_sums[dist_str][v]['sum'] + int(line[locations[v]])
-                                    except:
+                                    except Exception:
                                         continue
 
         return data_sums
@@ -587,7 +595,7 @@ class AnalyzeAreaSerializer(serializers.ModelSerializer):
 class DataPointSerializer(serializers.ModelSerializer):
     value = serializers.DecimalField(max_digits=30, decimal_places=15)
     time = serializers.DateTimeField()
-    
+
     class Meta:
         model = DataPoint
         fields = ('value', 'time')
@@ -696,11 +704,7 @@ class AnalyzeAreaNoValuesSerializer(serializers.ModelSerializer):
                                         'field1': p.mappoint.field1,
                                         'field2': p.mappoint.field2,
                                         'field3': p.mappoint.field3,
-                                        'tags': Tag.objects.filter(
-                                                approved=True,
-                                                tagindiv__mapelement=mappoint)
-                                                .distinct('tag')
-                                                .values('tag')})
+                                        'tags': Tag.objects.filter(approved=True, tagindiv__mapelement=mappoint).distinct('tag').values('tag')})
         already_accounted = set()
         boundary = unite_radius_bubbles(all_points, dist_objs)
         for dist in dist_objs:
@@ -710,21 +714,21 @@ class AnalyzeAreaNoValuesSerializer(serializers.ModelSerializer):
                 dist_str = '%f km' % (dist.km)
             elif unit == 'mi':
                 dist_str = '%f mi' % (dist.mi)
-            temp_qs = MapPolygon.objects \
-                      .filter(dataset_id__exact=dataset_id) \
-                      .filter(mpoly__coveredby=boundary[dist]) \
-                      .exclude(remote_id__in=already_accounted).distinct()
+            temp_qs = MapPolygon.objects.filter(dataset_id__exact=dataset_id) \
+                                        .filter(mpoly__coveredby=boundary[dist]) \
+                                        .exclude(remote_id__in=already_accounted) \
+                                        .distinct()
             poly = {x: 1. for x in temp_qs.values_list('remote_id', flat=True)}
             try:
                 land_area = sum([int(x) for x in temp_qs.values_list('field1', flat=True)])
-            except:
+            except Exception:
                 continue
             # print 'poly', poly
-            maybe_polys = MapPolygon.objects \
-                          .filter(dataset_id__exact=dataset_id) \
-                          .exclude(remote_id__in=poly) \
-                          .exclude(remote_id__in=already_accounted) \
-                          .filter(mpoly__intersects=boundary[dist]).distinct()
+            maybe_polys = MapPolygon.objects.filter(dataset_id__exact=dataset_id) \
+                                            .exclude(remote_id__in=poly) \
+                                            .exclude(remote_id__in=already_accounted) \
+                                            .filter(mpoly__intersects=boundary[dist]) \
+                                            .distinct()
             # print 'maybes', maybe_polys.values_list('remote_id',flat=True)
             for polygon in maybe_polys:
                 intersection_area = polygon.mpoly.intersection(
@@ -735,7 +739,7 @@ class AnalyzeAreaNoValuesSerializer(serializers.ModelSerializer):
                     try:
                         land_area += intersection_area*int(polygon.field1) \
                                      if apportionment else int(polygon.field1)
-                    except:
+                    except Exception:
                         continue
 
             already_accounted = already_accounted | set(poly.keys())

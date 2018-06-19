@@ -30,14 +30,14 @@ def filter_request(parameters, model_type):
                 try:
                     num = int(tag)
                     queryset = queryset.filter(tagindiv__tag=num)
-                except:
+                except Exception:
                     queryset = queryset.filter(tagindiv__tag__tag=tag)
         else:
             for tag in tags:
                 try:
                     num = int(tag)
                     queryset = queryset | MapElement.objects.filter(tagindiv__tag=num)
-                except:
+                except Exception:
                     queryset = queryset | MapElement.objects.filter(tagindiv__tag__tag=tag)
         queryset = queryset.filter(tagindiv__tag__approved=True)
     else:
@@ -54,7 +54,7 @@ def filter_request(parameters, model_type):
             try:
                 r = int(dataset)
                 queryset = queryset.filter(dataset__id__exact=r)
-            except:
+            except Exception:
                 queryset = queryset.filter(dataset__name__icontains=dataset)
 
     # make it just one type now
@@ -80,7 +80,7 @@ def filter_request(parameters, model_type):
         if key in parameters:
             try:
                 r = float(parameters[key])
-            except:
+            except Exception:
                 return HttpResponseBadRequest('Invalid radius. Only integers accepted.')
                 continue
             bb[key] = r
@@ -98,7 +98,7 @@ def filter_request(parameters, model_type):
     if 'radius' in parameters and 'center' in parameters:
         try:
             radius = int(parameters['radius'])
-        except:
+        except Exception:
             return HttpResponseBadRequest('Invalid radius. Only integers accepted.')
         temp = parameters['center'].split(',')
         try:
@@ -107,7 +107,7 @@ def filter_request(parameters, model_type):
             temp[0] = float(temp[0])
             temp[1] = float(temp[1])
             center = Point(temp[0], temp[1])
-        except:
+        except Exception:
             return HttpResponseBadRequest('Invalid center. '
                                           'Format is: center=lon,lat')
         queryset = queryset.filter(point__distance_lte=(center, Distance(mi=radius)))
