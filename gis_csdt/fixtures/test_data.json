@@ -90,7 +90,8 @@
 },
 {
   "fields": {
-    "name": "RPI"
+    "name": "RPI",
+    "remote_id": 10
   },
   "model": "gis_csdt.mapelement",
   "pk": 1
@@ -128,12 +129,48 @@
 },
 {
   "fields": {
+    "dataset": 3,
+    "field_type": "I",
+    "field_name": "int_data"
+  },
+  "model": "gis_csdt.datafield",
+  "pk": 2
+},
+{
+  "fields": {
+    "dataset": 3,
+    "field_type": "F",
+    "field_name": "float_data"
+  },
+  "model": "gis_csdt.datafield",
+  "pk": 3
+},
+{
+  "fields": {
     "datafield": 1,
     "mapelement": 1,
     "int_data": 2
   },
   "model": "gis_csdt.dataelement",
   "pk": 1
+},
+{
+  "fields": {
+    "datafield": 2,
+    "mapelement": 1,
+    "int_data": 3
+  },
+  "model": "gis_csdt.dataelement",
+  "pk": 2
+},
+{
+  "fields": {
+    "datafield": 3,
+    "mapelement": 1,
+    "float_data": 3.5
+  },
+  "model": "gis_csdt.dataelement",
+  "pk": 3
 },
 {
   "fields": {

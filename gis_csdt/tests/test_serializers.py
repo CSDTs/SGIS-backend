@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 from rest_framework.views import APIView
 from gis_csdt.models import DataElement, DataField, Dataset, DatasetNameField, MapElement, MapPoint, MapPolygon, Tag, TagIndiv
 from gis_csdt.serializers import AnalyzeAreaNoValuesSerializer, AnalyzeAreaSerializer, CountPointsSerializer, DataPointSerializer, DatasetSerializer, NewTagSerializer, SensorSerializer, TestSerializer
-from django.contrib.gis.geos import Polygon, MultiPolygon, Point
+from django.contrib.gis.geos import Polygon, MultiPolygon, Point, fromstr, GEOSGeometry
 from django.contrib.auth import get_user_model
 from django.http import HttpRequest, QueryDict
 
@@ -136,14 +136,23 @@ class TestAnalyzeAreaSerializer(TestCase):
         tagindiv1.save()
         tagindiv2 = TagIndiv(tag=tag2, mapelement=self.mp)
         tagindiv2.save()
-        p1 = Polygon(((2, 2), (11, 21), (39, 41), (2, 2)))
-        p2 = Polygon(((1, 1), (10, 4), (48, 42), (1, 1)))
-        mpoly = MultiPolygon(p1, p2)
-        polygon = MapPolygon(lat='50.2340', lon='28.3282', field1=1.0, field2=2.0, mpoly=mpoly, dataset=ds, remote_id=10)
-        polygon.save()
+        p1 = GEOSGeometry("SRID=4326;POLYGON ((5 23.00902982868961, 5.004877257506506 23.00781998654152, 5.00844745207902 23.00451469036915, 5.009753953024734 22.99999969967893, 5.008446890194161 22.99548485657674, 5.004876695621637 22.99217985558042, 5 22.99097016102037, 4.995123304378363 22.99217985558042, 4.991553109805839 22.99548485657674, 4.990246046975266 22.99999969967893, 4.99155254792098 23.00451469036915, 4.995122742493493 23.00781998654153, 5 23.00902982868961))")
+        p2 = GEOSGeometry("SRID=4326;POLYGON ((5 23.02708945518625, 5.014633459242311 23.02345948568706, 5.025344042308789 23.01354271143227, 5.029261858728946 22.99999729711045, 5.025338985345226 22.98645321108062, 5.014628402277986 22.97653909341024, 5 22.97291045220348, 4.985371597722013 22.97653909341024, 4.974661014654773 22.98645321108062, 4.970738141271054 22.99999729711045, 4.974655957691211 23.01354271143227, 4.985366540757689 23.02345948568706, 5 23.02708945518625))")
+        p3 = GEOSGeometry("SRID=4326;POLYGON ((5 23.0451490404854, 5.024391911722986 23.03909835241012, 5.042242881329157 23.02256891874033, 5.048769763397385 22.99999249197385, 5.042228834209113 22.97741975490609, 5.024377864597061 22.96089770063709, 5 22.95485070226389, 4.975622135402939 22.96089770063709, 4.957771165790887 22.97741975490609, 4.951230236602615 22.99999249197385, 4.957757118670842 23.02256891874033, 4.975608088277014 23.03909835241012, 5 23.0451490404854))")
+        mpoly1 = MultiPolygon(fromstr(str(p1)))
+        polygon1 = MapPolygon(lat='50', lon='22', field1=1.0, field2=2.0, mpoly=mpoly1, dataset=ds, remote_id=10)
+        polygon1.save()
+        mpoly2 = MultiPolygon(fromstr(str(p2)))
+        polygon2 = MapPolygon(lat='12', lon='17', field1=1.0, field2=2.0, mpoly=mpoly2, dataset=ds, remote_id=9)
+        polygon2.save()
+        mpoly3 = MultiPolygon(fromstr(str(p3)))
+        polygon3 = MapPolygon(lat='23', lon='27', field1=1.0, field2=2.0, mpoly=mpoly3, dataset=ds, remote_id=9)
+        polygon3.save()
+
 
         self.request = HttpRequest()
         qdict = QueryDict('', mutable=True)
+        qdict.update({'year': '2010'})
         qdict.update({'year': '2014'})
         qdict.update({'year': '2016'})
         qdict.update({'unit': 'km'})
@@ -181,11 +190,18 @@ class TestAnalyzeAreaNoValuesSerializer(TestCase):
         tagindiv1.save()
         tagindiv2 = TagIndiv(tag=tag2, mapelement=self.mp)
         tagindiv2.save()
-        # p1 = Polygon(((2, 2), (11, 21), (39, 41), (2, 2)))
-        # p2 = Polygon(((1, 1), (10, 4), (48, 42), (1, 1)))
-        # mpoly = MultiPolygon(p1, p2)
-        # polygon = MapPolygon(lat='50.2340', lon='28.3282', field1=1.0, field2=2.0, mpoly=mpoly, dataset=ds, remote_id=10)
-        # polygon.save()
+        p1 = GEOSGeometry("SRID=4326;POLYGON ((5 23.00902982868961, 5.004877257506506 23.00781998654152, 5.00844745207902 23.00451469036915, 5.009753953024734 22.99999969967893, 5.008446890194161 22.99548485657674, 5.004876695621637 22.99217985558042, 5 22.99097016102037, 4.995123304378363 22.99217985558042, 4.991553109805839 22.99548485657674, 4.990246046975266 22.99999969967893, 4.99155254792098 23.00451469036915, 4.995122742493493 23.00781998654153, 5 23.00902982868961))")
+        p2 = GEOSGeometry("SRID=4326;POLYGON ((5 23.02708945518625, 5.014633459242311 23.02345948568706, 5.025344042308789 23.01354271143227, 5.029261858728946 22.99999729711045, 5.025338985345226 22.98645321108062, 5.014628402277986 22.97653909341024, 5 22.97291045220348, 4.985371597722013 22.97653909341024, 4.974661014654773 22.98645321108062, 4.970738141271054 22.99999729711045, 4.974655957691211 23.01354271143227, 4.985366540757689 23.02345948568706, 5 23.02708945518625))")
+        p3 = GEOSGeometry("SRID=4326;POLYGON ((5 23.0451490404854, 5.024391911722986 23.03909835241012, 5.042242881329157 23.02256891874033, 5.048769763397385 22.99999249197385, 5.042228834209113 22.97741975490609, 5.024377864597061 22.96089770063709, 5 22.95485070226389, 4.975622135402939 22.96089770063709, 4.957771165790887 22.97741975490609, 4.951230236602615 22.99999249197385, 4.957757118670842 23.02256891874033, 4.975608088277014 23.03909835241012, 5 23.0451490404854))")
+        mpoly1 = MultiPolygon(fromstr(str(p1)))
+        polygon1 = MapPolygon(lat='50', lon='22', field1=1.0, field2=2.0, mpoly=mpoly1, dataset=ds, remote_id=10)
+        polygon1.save()
+        mpoly2 = MultiPolygon(fromstr(str(p2)))
+        polygon2 = MapPolygon(lat='12', lon='17', field1=1.0, field2=2.0, mpoly=mpoly2, dataset=ds, remote_id=9)
+        polygon2.save()
+        mpoly3 = MultiPolygon(fromstr(str(p3)))
+        polygon3 = MapPolygon(lat='23', lon='27', field1=1.0, field2=2.0, mpoly=mpoly3, dataset=ds, remote_id=9)
+        polygon3.save()
 
         self.request = HttpRequest()
         qdict = QueryDict('', mutable=True)
@@ -197,7 +213,7 @@ class TestAnalyzeAreaNoValuesSerializer(TestCase):
 
     def test_can_get_areaAroundPoint(self):
         data = self.serializer.get_areaAroundPoint(self.mp)
-        self.assertEqual(data['1.000000 km'], {})
+        self.assertEqual(data['1.000000 km'], {'land_area': 1, 'polygons': {u'10': 1.0}})
         self.assertEqual(data['points'][0]['state'], 'NY')
         self.assertEqual(data['points'][0]['city'], 'NYC')
 
