@@ -48,7 +48,9 @@ else:
 
 
 class NewTagSerializer(serializers.ModelSerializer):
-    # mappolygon = MapElementIdField(required=False, source='mapelement_id', field='mappolygon')
+    # mappolygon = MapElementIdField(required=False,
+    #                                source='mapelement_id',
+    #                                field='mappolygon')
     mapelement = serializers.IntegerField(source='mapelement_id')
     tag = serializers.CharField()
 
@@ -276,15 +278,18 @@ class CountPointsSerializer(serializers.ModelSerializer):
         for df in datafields:
             data = None
             if df.field_type == DataField.INTEGER:
-                element = DataElement.objects.filter(datafield=df).filter(mapelement=mappolygon)
+                element = DataElement.objects.filter(datafield=df) \
+                                             .filter(mapelement=mappolygon)
                 if element:
                     data = element[0].int_data
             elif df.field_type == DataField.FLOAT:
-                element = DataElement.objects.filter(datafield=df).filter(mapelement=mappolygon)
+                element = DataElement.objects.filter(datafield=df) \
+                                             .filter(mapelement=mappolygon)
                 if element:
                     data = element[0].float_data
             else:
-                element = DataElement.objects.filter(datafield=df).filter(mapelement=mappolygon)
+                element = DataElement.objects.filter(datafield=df) \
+                                             .filter(mapelement=mappolygon)
                 if element:
                     data = element[0].char_data
             if data:
@@ -436,7 +441,8 @@ class AnalyzeAreaSerializer(serializers.ModelSerializer):
                         data = DataElement.objects \
                                .filter(datafield_id=field.id,
                                        mapelement__remote_id__in=poly) \
-                               .aggregate(sum=Sum('int_data'), dsum=Sum('denominator__int_data'))
+                               .aggregate(sum=Sum('int_data'),
+                                          dsum=Sum('denominator__int_data'))
                         # print data['sum'], data['dsum']
                     elif field.field_type == DataField.FLOAT:
                         data = DataElement.objects \
@@ -692,7 +698,9 @@ class AnalyzeAreaNoValuesSerializer(serializers.ModelSerializer):
                                         .filter(dataset_id=mappoint.dataset_id),
                                         dist_objs[-1])
         # print len(all_points), all_points
-        data_sums = {'points': [], 'view url': 'http://127.0.0.1:8000/around-point/%d/' % (all_points[0].id)}
+        data_sums = {'points': [],
+                     'view url': 'http://127.0.0.1:8000/around-point/%d/'
+                     % (all_points[0].id)}
         for p in all_points:
             data_sums['points'].append({'id': p.id,
                                         'name': p.name,

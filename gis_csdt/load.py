@@ -76,7 +76,7 @@ def run(verbose=True, year=2010, starting_state=1):
             max_state = int(max_state)/1000000000
             if max_state >= starting_state:
                 starting_state = max_state + 1
-        except:
+        except Exception:
             pass
 
     for i in [format(x, '#02d') for x in range(starting_state, 100)]:
@@ -161,7 +161,7 @@ def get_income(year=2010, ds_id=0, to_process=None):
         for v in to_process:
             if 'variable' not in v or 'variable_type' not in v:
                 raise
-    except:
+    except Exception:
         # http://www.census.gov/data/developers/data-sets/acs-survey-5-year-data.html
         # http://api.census.gov/data/2010/acs5/variables.html
         #              median household income                                     Total population
@@ -197,7 +197,7 @@ def get_income(year=2010, ds_id=0, to_process=None):
     for item in to_process:
         try:
             dfs.append(DataField.objects.filter(dataset_id__exact=ds[0].id).get(field_name=item['variable']))
-        except:
+        except Exception:
             request = 'http://api.census.gov/data/2010/acs5/variables/%s.json' % (item['variable'])
             data = json.loads(urllib.urlopen(request).read())
             dfs.append(DataField(dataset=ds[0], field_en=data['label'],
@@ -219,7 +219,7 @@ def get_income(year=2010, ds_id=0, to_process=None):
         request = 'http://api.census.gov/data/2010/acs5?key=%s&get=%s,NAME&for=tract:*&in=state:%s,county:%s' % (key, get, county[1], county[2])
         try:
             data = json.loads(urllib.urlopen(request).read())
-        except:
+        except Exception:
             continue
         converted = {}
         # locations of basic data in each list
@@ -254,13 +254,13 @@ def get_income(year=2010, ds_id=0, to_process=None):
                         if df.field_type == DataField.INTEGER:
                             try:
                                 de.int_data = int(converted[poly.remote_id][df.field_name])
-                            except:
+                            except Exception:
                                 print 'integer conversion failed for census tract %s, field %s' % (poly.remote_id, df.field_name)
                                 print 'value:', converted[poly.remote_id][df.field_name]
                         elif df.field_type == DataField.FLOAT:
                             try:
                                 de.float_data = float(converted[poly.remote_id][df.field_name])
-                            except:
+                            except Exception:
                                 print 'float conversion failed for census tract %s, field %s' % (poly.remote_id, df.field_name)
                         elif df.field_type == DataField.STRING:
                             if len(converted[poly.remote_id][df.field_name]) > 200:
@@ -275,7 +275,7 @@ def get_income(year=2010, ds_id=0, to_process=None):
                             recursive_link[df.field_name[:-4]] = de
                         try:
                             de.denominator = recursive_link[df.field_name[:-4]]
-                        except:
+                        except Exception:
                             pass
                         de.save()
 
@@ -290,7 +290,7 @@ def add_denominator():
                 try:
                     de.denominator = DataElement.objects.filter(datafield_id__exact=df_denom.id).get(mapelement_id=de.id)
                     de.save()
-                except:
+                except Exception:
                     continue
 
 
@@ -344,7 +344,7 @@ def add_point_to_mp(dataset=None):
         try:
             mp.point = Point(float(mp.lon), float(mp.lat))
             mp.save()
-        except:
+        except Exception:
             pass
 
 
@@ -429,7 +429,7 @@ def hazardous_waste(year=2011, verbose=True):
                 if key in ['lat', 'lon']:
                     try:
                         kwargs[key] = float(row[locs[key]])
-                    except:
+                    except Exception:
                         kwargs[key] = 0.
                 elif MapPoint._meta.get_field(key).max_length < len(row[locs[key]]):
                     kwargs[key] = row[locs[key]][:MapPoint._meta.get_field(key).max_length]
@@ -437,7 +437,7 @@ def hazardous_waste(year=2011, verbose=True):
                     kwargs[key] = row[locs[key]]
             try:
                 kwargs['point'] = Point(kwargs['lon'], kwargs['lat'])
-            except:
+            except Exception:
                 if verbose:
                     print '\tInvalid lat/long for row: %s' % (row)
                     print '\tLat: %f Lon: %f' % (kwargs['lat'], kwargs['lon'])
@@ -583,7 +583,7 @@ def load_from_se(year=2000):
     for key in flds:
         try:
             df = DataField.objects.filter(dataset_id=dataset.id).get(field_name=key)
-        except:
+        except Exception:
             df = DataField(dataset=dataset, field_name=key,
                            field_en=flds[key], field_longname=flds[key],
                            field_type=DataField.INTEGER)
@@ -599,7 +599,7 @@ def load_from_se(year=2000):
             geo = '0'*(11-len(line['Geo_FIPS'])) + line['Geo_FIPS']
             try:
                 me = MapElement.objects.filter(dataset_id=dataset.id).get(remote_id=geo)
-            except:
+            except Exception:
                 print 'GEOID:', line['Geo_FIPS'], 'does not exist'
                 continue
             current = {}
@@ -607,7 +607,7 @@ def load_from_se(year=2000):
                 if key in flds:
                     try:
                         de = DataElement(datafield=flds[key], mapelement=me, int_data=int(line[key]))
-                    except:
+                    except Exception:
                         continue
                     de.save()
                     if key[-4:] == '_001':
@@ -615,6 +615,6 @@ def load_from_se(year=2000):
                     try:
                         de.denominator = current[key[:-4]]
                         de.save()
-                    except:
+                    except Exception:
                         pass
         print 'file', filename, 'processed'
