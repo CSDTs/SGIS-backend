@@ -3,8 +3,8 @@ import os
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
 
-DEBUG = True # False
-ALLOWED_HOSTS = ['*'] ##FOR TESTING ONLY
+DEBUG = True  # False
+ALLOWED_HOSTS = ['*']  # FOR TESTING ONLY
 
 ADMINS = (
     # ('Your Name', 'your_email@example.com'),
@@ -14,9 +14,9 @@ MANAGERS = ADMINS
 
 DATABASES = {
     'default': {
-#        'ENGINE': 'django.contrib.gis.db.backends.postgis',
-#        'ENGINE': 'django.db.backends.postgresql',
-	'ENGINE': 'django.contrib.gis.db.backends.postgis',
+        # 'ENGINE': 'django.contrib.gis.db.backends.postgis',
+        # 'ENGINE': 'django.db.backends.postgresql',
+        'ENGINE': 'django.contrib.gis.db.backends.postgis',
         'NAME': 'django_test',
         'USER': 'django_user',
         'PASSWORD': 'dj4ng0_t3st',
@@ -159,14 +159,14 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly'
     ],
-    #'EXCEPTION_HANDLER': 'gis_csdt.exceptions.custom_exception_handler',
+    # 'EXCEPTION_HANDLER': 'gis_csdt.exceptions.custom_exception_handler',
     'EXCEPTION_HANDLER': 'gis_csdt.exceptions.custom_exception_handler',
     'TEST_REQUEST_DEFAULT_FORMAT': 'json'
 }
 
 
-TEMPLATES = [ 
-    {   
+TEMPLATES = [
+    {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [os.path.join(PROJECT_ROOT, 'templates')],
         'APP_DIRS': True,
@@ -176,9 +176,9 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-            ],  
-        },  
-    },  
+            ],
+        },
+    },
 ]
 
 try:
