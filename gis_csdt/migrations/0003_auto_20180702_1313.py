@@ -7,6 +7,56 @@ from django.db import migrations, models
 import django.db.models.deletion
 
 
+def add_datapoints_to_sensor(apps, schema_editor):
+    DataPoint = apps.get_model('gis_csdt', 'DataPoint')
+    Sensor = apps.get_model('gis_csdt', 'Sensor')
+    for dp in DataPoint.objects.all():
+        sensor = Sensor.objects.get(pk=dp.sensor.id)
+        if sensor.mappoint == None:
+            sensor.mappoint = dp.point
+        if sensor.user == None:
+            sensor.user = dp.user
+        sensor.datapoints.add(dp)
+        sensor.save()
+
+
+def update_dataset(apps, schema_editor):
+    Dataset = apps.get_model('gis_csdt', 'Dataset')
+    Location = apps.get_model('gis_csdt', 'Location')
+    GeoCoordinates = apps.get_model('gis_csdt', 'GeoCoordinates')
+    DatasetNameField = apps.get_model('gis_csdt', 'DatasetNameField')
+    for ds in Dataset.objects.all():
+        coor_attrs = ['lat_field', 'lon_field']
+        location_attrs = ['street_field', 'city_field', 'state_field',
+                          'county_field','zipcode_field']
+        names_attrs = ['field1_en', 'field1_name', 'field2_en',
+                       'field2_name', 'field3_en', 'field3_name']
+        #if (not None) in [getattr(ds, attr) for attr in coor_attrs]:
+        coor = GeoCoordinates()
+        coor.save()
+        for attr in coor_attrs:
+            setattr(coor, attr, getattr(ds, attr))
+            coor.save()
+        ds.coordinates = coor
+        ds.save()
+        #if (not None) in [getattr(ds, attr) for attr in location_attrs]:
+        location = Location()
+        location.save()
+        for attr in location_attrs:
+            setattr(location, attr, getattr(ds, attr))
+            location.save()
+        ds.location = location
+        ds.save()
+        #if (not None) in [getattr(ds, attr) for attr in names_attrs]:
+        names = DatasetNameField()
+        names.save()
+        for attr in names_attrs:
+            setattr(names, attr, getattr(ds, attr))
+            names.save()
+        ds.names = names
+        ds.save()
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -15,6 +65,22 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        migrations.RemoveField(
+            model_name='observation',
+            name='mapelement',
+        ),
+        migrations.RemoveField(
+            model_name='observation',
+            name='sensor',
+        ),
+        migrations.AlterUniqueTogether(
+            name='observationvalue',
+            unique_together=set([]),
+        ),
+        migrations.RemoveField(
+            model_name='observationvalue',
+            name='observation',
+        ),
         migrations.CreateModel(
             name='DatasetNameField',
             fields=[
@@ -46,22 +112,43 @@ class Migration(migrations.Migration):
                 ('county_field', models.CharField(blank=True, default=b'county', max_length=50)),
             ],
         ),
-        migrations.RemoveField(
-            model_name='observation',
-            name='mapelement',
+        migrations.AddField(
+            model_name='datapoint',
+            name='time',
+            field=models.DateTimeField(blank=True, null=True),
         ),
-        migrations.RemoveField(
-            model_name='observation',
-            name='sensor',
+        migrations.AddField(
+            model_name='sensor',
+            name='datapoints',
+            field=models.ManyToManyField(blank=True, to='gis_csdt.DataPoint'),
         ),
-        migrations.AlterUniqueTogether(
-            name='observationvalue',
-            unique_together=set([]),
+        migrations.AddField(
+            model_name='sensor',
+            name='mappoint',
+            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.CASCADE, related_name='points', to='gis_csdt.MapPoint'),
         ),
-        migrations.RemoveField(
-            model_name='observationvalue',
-            name='observation',
+        migrations.AddField(
+            model_name='sensor',
+            name='user',
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL),
         ),
+        migrations.RunPython(add_datapoints_to_sensor),
+        migrations.AddField(
+            model_name='dataset',
+            name='coordinates',
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to='gis_csdt.GeoCoordinates'),
+        ),
+        migrations.AddField(
+            model_name='dataset',
+            name='location',
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to='gis_csdt.Location'),
+        ),
+        migrations.AddField(
+            model_name='dataset',
+            name='names',
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to='gis_csdt.DatasetNameField'),
+        ),
+        migrations.RunPython(update_dataset),
         migrations.RemoveField(
             model_name='datapoint',
             name='point',
@@ -126,45 +213,10 @@ class Migration(migrations.Migration):
             model_name='dataset',
             name='zipcode_field',
         ),
-        migrations.AddField(
-            model_name='datapoint',
-            name='time',
-            field=models.DateTimeField(blank=True, null=True),
-        ),
-        migrations.AddField(
-            model_name='sensor',
-            name='datapoints',
-            field=models.ManyToManyField(blank=True, to='gis_csdt.DataPoint'),
-        ),
-        migrations.AddField(
-            model_name='sensor',
-            name='mappoint',
-            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.CASCADE, related_name='points', to='gis_csdt.MapPoint'),
-        ),
-        migrations.AddField(
-            model_name='sensor',
-            name='user',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL),
-        ),
         migrations.DeleteModel(
             name='Observation',
         ),
         migrations.DeleteModel(
             name='ObservationValue',
-        ),
-        migrations.AddField(
-            model_name='dataset',
-            name='coordinates',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to='gis_csdt.GeoCoordinates'),
-        ),
-        migrations.AddField(
-            model_name='dataset',
-            name='location',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to='gis_csdt.Location'),
-        ),
-        migrations.AddField(
-            model_name='dataset',
-            name='names',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, to='gis_csdt.DatasetNameField'),
         ),
     ]
