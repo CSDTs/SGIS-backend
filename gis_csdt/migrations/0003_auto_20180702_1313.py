@@ -134,7 +134,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='sensor',
             name='datapoints',
-            field=models.ManyToManyField(to='gis_csdt.DataPoint'),
+            field=models.ManyToManyField(blank=True, to='gis_csdt.DataPoint'),
         ),
         migrations.AddField(
             model_name='sensor',
