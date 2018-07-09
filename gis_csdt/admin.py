@@ -13,6 +13,10 @@ class DatasetAdmin(admin.ModelAdmin):
         ('Geocoding',       {'fields': ['needs_geocoding']})]
 
 
+class SensorAdmin(admin.ModelAdmin):
+    filter_horizontal = ('datapoints', )
+
+
 admin.site.register(Dataset, DatasetAdmin)
 # for testing
 admin.site.register(MapPoint)
@@ -21,7 +25,7 @@ admin.site.register(MapPolygon)
 admin.site.register(TagIndiv)
 admin.site.register(DataField)
 admin.site.register(DataElement)
-admin.site.register(Sensor)
+admin.site.register(Sensor, SensorAdmin)
 admin.site.register(DataPoint)
 admin.site.register(PhoneNumber)
 admin.site.register(Location)
