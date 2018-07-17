@@ -8,7 +8,7 @@ import os
 import urllib
 import zipfile
 from django.contrib.gis.utils import LayerMapping
-from models import MapPolygon, MapElement, MapPoint, Dataset, DataField, DataElement, Tag, TagIndiv
+from models import MapPolygon, MapElement, MapPoint, GeoCoordinates, Location, DatasetNameField, Dataset, DataField, DataElement, Tag, TagIndiv
 from datetime import datetime
 from django.utils.timezone import utc
 from django.conf import settings
@@ -37,16 +37,20 @@ def run(verbose=True, year=2010, starting_state=1):
         ds = dataset_qs[0]
         ds.cached = datetime.utcnow().replace(tzinfo=utc),
     else:
+        coor = GeoCoordinates(lat_field='INTPTLAT'+str(year)[-2:],
+                              lon_field='INTPTLON'+str(year)[-2:])
+        coor.save()
+        names = DatasetNameField(field1_en='Land Area',
+                                 field1_name='ALAND'+str(year)[-2:],
+                                 field2_en='Water Area',
+                                 field2_name='AWATER'+str(year)[-2:])
+        names.save()
         ds = Dataset(name=str(year)+' Census Tracts',
                      cached=datetime.utcnow().replace(tzinfo=utc),
                      cache_max_age=1000,
                      name_field='NAMELSAD'+str(year)[-2:],
-                     lat_field='INTPTLAT'+str(year)[-2:],
-                     lon_field='INTPTLON'+str(year)[-2:],
-                     field1_en='Land Area',
-                     field1_name='ALAND'+str(year)[-2:],
-                     field2_en='Water Area',
-                     field2_name='AWATER'+str(year)[-2:])
+                     coordinates=coor,
+                     names=names)
         if year == 2010:
             ds.remote_id_field = 'GEOID00'
         elif year == 2000:
@@ -56,10 +60,10 @@ def run(verbose=True, year=2010, starting_state=1):
     tract_mapping = {
         'remote_id': ds.remote_id_field,
         'name': ds.name_field,
-        'lat': ds.lat_field,
-        'lon': ds.lon_field,
-        'field1': ds.field1_name,
-        'field2': ds.field2_name,
+        'lat': ds.coordinates.lat_field,
+        'lon': ds.coordinates.lon_field,
+        'field1': ds.names.field1_name,
+        'field2': ds.names.field2_name,
         'mpoly': 'MULTIPOLYGON',
     }
 
@@ -353,6 +357,19 @@ def hazardous_waste(year=2011, verbose=True):
         dataset = Dataset.objects.get(name="Hazardous Waste Sites "+str(year))
         dataset.cached = datetime.utcnow().replace(tzinfo=utc)
     except ObjectDoesNotExist:
+        coor = GeoCoordinates(lat_field="Latitude",
+                              lon_field="Longitude")
+        coor.save()
+        names = DatasetNameField(field1_en="Generator Status",
+                                 field1_name="Generator Status",
+                                 field2_en="Biennial Report Link",
+                                 field2_name="Biennial Report Link")
+        names.save()
+        location = Location(street_field="Address",
+                            city_field="City",
+                            state_field="State",
+                            zipcode_field="ZIP Code",
+                            county_field="County")
         dataset = Dataset(
             name="Hazardous Waste Sites "+str(year),
             url='/data/ej/'+str(year)+'/',
@@ -360,17 +377,9 @@ def hazardous_waste(year=2011, verbose=True):
             cache_max_age=1000,
             remote_id_field="Handler ID",
             name_field="Handler Name",
-            street_field="Address",
-            city_field="City",
-            state_field="State",
-            zipcode_field="ZIP Code",
-            county_field="County",
-            lat_field="Latitude",
-            lon_field="Longitude",
-            field1_en="Generator Status",
-            field1_name="Generator Status",
-            field2_en="Biennial Report Link",
-            field2_name="Biennial Report Link",
+            location=location,
+            coordinates=coor,
+            names=names
             needs_geocoding=False)
     dataset.save()
 
@@ -405,23 +414,23 @@ def hazardous_waste(year=2011, verbose=True):
                 locs['remote_id'] = i
             elif row[i] == dataset.name_field:
                 locs['name'] = i
-            elif row[i] == dataset.street_field:
+            elif row[i] == dataset.location.street_field:
                 locs['street'] = i
-            elif row[i] == dataset.city_field:
+            elif row[i] == dataset.location.city_field:
                 locs['city'] = i
-            elif row[i] == dataset.state_field:
+            elif row[i] == dataset.location.state_field:
                 locs['state'] = i
-            elif row[i] == dataset.zipcode_field:
+            elif row[i] == dataset.location.zipcode_field:
                 locs['zipcode'] = i
-            elif row[i] == dataset.county_field:
+            elif row[i] == dataset.location.county_field:
                 locs['county'] = i
-            elif row[i] == dataset.lat_field:
+            elif row[i] == dataset.coordinates.lat_field:
                 locs['lat'] = i
-            elif row[i] == dataset.lon_field:
+            elif row[i] == dataset.coordinates.lon_field:
                 locs['lon'] = i
-            elif row[i] == dataset.field1_name:
+            elif row[i] == dataset.names.field1_name:
                 locs['field1'] = i
-            elif row[i] == dataset.field2_name:
+            elif row[i] == dataset.names.field2_name:
                 locs['field2'] = i
         for row in readfile:
             kwargs = {'dataset': dataset}
