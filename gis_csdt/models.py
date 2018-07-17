@@ -416,7 +416,7 @@ class Sensor(models.Model):
     metric = models.CharField(max_length=100, default='metric')
     accuracy = models.CharField(max_length=100, default='accuracy')
     user = models.ForeignKey(get_user_model(), blank=True, null=True)
-    datapoints = models.ManyToManyField(DataPoint)
+    datapoints = models.ManyToManyField(DataPoint, blank=True)
     mappoint = models.ForeignKey(MapPoint, related_name='points', null=True)
 
     def __unicode__(self):
