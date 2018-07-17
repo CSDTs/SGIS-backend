@@ -132,6 +132,8 @@ class TestAroundPointNoValueView(TestCase):
         response = self.client.get('/api-dist2/', {'min_lat': 12.12, 'max_lat': 108.00, 'dataset': '1,2', 'unit': 'km'})
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, str(mp1))
+        response = self.client.get('/api-dist2/', {'min_lat': 12.12, 'max_lat': 108.00, 'dataset': '1,2', 'unit': ['km', 'm']})
+        self.assertEqual(response.status_code, 400)
 
 
 class TestCountPointsInPolygonView(TestCase):

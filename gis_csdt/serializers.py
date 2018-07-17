@@ -619,11 +619,12 @@ class SensorSerializer(serializers.ModelSerializer):
     metric = serializers.CharField(max_length=100)
     accuracy = serializers.CharField(max_length=100)
     datapoints = DataPointSerializer(many=True, read_only=True)
-    points = MapPointSerializer(many=True, read_only=True)
+    mappoint = MapPointSerializer(read_only=True)
 
     class Meta:
         model = Sensor
         fields = ('name', 'supplier', 'model_number', 'metric', 'accuracy')
+        read_only_fields = ('datapoints', 'mappoint')
 
     def create(self, attrs, instance=None):
         thisUser = self.context['request'].user
@@ -634,6 +635,13 @@ class SensorSerializer(serializers.ModelSerializer):
                              accuracy=attrs['accuracy'],
                              user=thisUser)
         sensorModel.save()
+        if 'datapoints' in attrs:
+            for dp in attrs['datapoints']:
+                sensorModel.datapoints.add(DataPoint.objects.get(pk=dp))
+                sensorModel.save()
+        if 'mappoint' in attrs:
+            sensorModel.mappoint = MapPoint.objects.get(pk=attrs['mappoint'])
+            sensorModel.save()
         return sensorModel
 
 
