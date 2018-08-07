@@ -61,7 +61,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('gis_csdt', '0002_phonenumber'),
+        ('gis_csdt', '0003_auto_20180806_1629'),
     ]
 
     operations = [
